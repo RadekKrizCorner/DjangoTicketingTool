@@ -1,0 +1,35 @@
+# MkDocs build output
+site/
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# Virtual environments
+.venv/
+venv/
+
+# Local environment
+.env
+.env.*
+!.env.example
+
+# Local IDE files
+.idea/
+.vscode/
+
+# macOS
+.DS_Store
+
+# AI tools
+docs/superpowers/*
+!docs/superpowers/specs/
+!docs/superpowers/specs/*.md
+!docs/superpowers/plans/
+!docs/superpowers/plans/*.md
+.oca/*

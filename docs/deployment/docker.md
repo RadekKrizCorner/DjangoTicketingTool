@@ -1,0 +1,70 @@
+# Docker Deployment
+
+## Local Development
+
+Final Compose stack should include:
+
+```text
+api
+db
+redis
+celery-worker
+celery-beat
+mailpit
+docs
+```
+
+Current documentation-only milestone includes only the `docs` service.
+
+## Application Image
+
+After implementation, GitHub Actions will publish the application image to GHCR.
+
+Expected tags:
+
+```text
+ghcr.io/<owner>/<repo>/api:<sha>
+ghcr.io/<owner>/<repo>/api:latest
+ghcr.io/<owner>/<repo>/api:<git-tag>
+```
+
+The package must be configured as public so a teacher can pull the image without
+authentication.
+
+## Release Compose
+
+`docker-compose.release.yml` should use the published GHCR image instead of building
+locally.
+
+## Health Checks
+
+Docker health check should call:
+
+```text
+/api/v1/health/live/
+```
+
+Readiness checks for dependent services use:
+
+```text
+/api/v1/health/ready/
+```
+
+## Storage Protection
+
+Attachments must not share an unbounded host root filesystem path.
+
+Recommended production Docker setup:
+
+- store media on a dedicated bind mount or Docker volume
+- monitor free space
+- keep application quotas enabled
+- configure backup strategy for media files
+
+Application quotas:
+
+```text
+single file: 1 MB
+global media: 200 MB
+per project: 20 MB
+```

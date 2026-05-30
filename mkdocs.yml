@@ -1,0 +1,47 @@
+site_name: RKRIZ Project Management Backend
+site_description: Product specification for a Django, DRF, and Celery project management backend.
+theme:
+  name: material
+  features:
+    - navigation.sections
+    - navigation.top
+    - content.code.copy
+plugins:
+  - search
+markdown_extensions:
+  - admonition
+  - attr_list
+  - def_list
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.superfences
+nav:
+  - Home: index.md
+  - Product Specification: product-specification.md
+  - Architecture: architecture.md
+  - Security: security.md
+  - Attachments: attachments.md
+  - API:
+      - Overview: api/overview.md
+      - Endpoints: api/endpoints.md
+      - Errors and Pagination: api/errors-pagination.md
+  - Decisions:
+      - PostgreSQL: decisions/postgresql.md
+      - Celery Scheduling: decisions/celery-scheduling.md
+      - Redis HA: decisions/redis-ha.md
+  - Testing:
+      - Strategy: testing/strategy.md
+  - Deployment:
+      - Docker: deployment/docker.md
+      - Kubernetes: deployment/kubernetes.md
+      - Cloudflare Tunnel: deployment/cloudflare-tunnel.md
+  - Operations:
+      - Observability: operations/observability.md
+  - Review:
+      - Specification Review: reviews/product-specification-review.md
+  - Superpowers Spec:
+      - Design Document: superpowers/specs/2026-05-30-project-management-backend-design.md
+  - Implementation Plans:
+      - Backend Implementation: superpowers/plans/2026-05-30-project-management-backend-implementation.md
