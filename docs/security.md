@@ -26,6 +26,17 @@ The request endpoint returns the same response whether or not the email exists.
 
 Justification: this avoids account enumeration.
 
+Only accounts with usable local passwords receive reset email. SSO-only accounts
+with unusable passwords are accepted silently and receive no local reset email.
+Email backend failures are logged and still return the same accepted response so
+SMTP availability cannot reveal whether an account exists.
+
+Successful password reset and authenticated password change blacklist outstanding
+refresh tokens when the blacklist tables are available.
+
+Registration, authenticated password change, and password reset confirmation run
+Django password validators before storing a new password.
+
 ## Throttling
 
 Initial throttle targets:
@@ -35,6 +46,8 @@ login: 5/min
 password_reset: 3/min
 upload: 20/hour/user
 ```
+
+Tests raise these limits to avoid coupling behavioral tests to request ordering.
 
 ## CORS And CSRF
 

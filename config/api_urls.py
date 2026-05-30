@@ -6,6 +6,9 @@ from drf_spectacular.renderers import OpenApiJsonRenderer
 from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, SpectacularSwaggerView
 from rest_framework.permissions import AllowAny
 
+import apps.accounts.api.urls as accounts_api_urls
+import apps.health.api.urls as health_api_urls
+
 urlpatterns: list[URLPattern | URLResolver] = [
     path(
         "schema/",
@@ -25,5 +28,6 @@ urlpatterns: list[URLPattern | URLResolver] = [
         SpectacularRedocView.as_view(url_name="schema", permission_classes=[AllowAny]),
         name="redoc",
     ),
-    path("health/", include("apps.health.api.urls")),
+    path("health/", include(health_api_urls)),
+    path("users/", include(accounts_api_urls)),
 ]

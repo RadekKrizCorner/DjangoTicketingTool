@@ -3,10 +3,10 @@
 import dj_database_url
 from decouple import config
 
-from .base import *  # noqa: F403
-from .base import MIDDLEWARE as BASE_MIDDLEWARE
+from config.settings.base import *  # noqa: F403
+from config.settings.base import MIDDLEWARE as BASE_MIDDLEWARE
 
-SECRET_KEY = "test-secret-key"
+SECRET_KEY = "test-secret-key-with-enough-length-for-jwt"
 DEBUG = False
 ALLOWED_HOSTS = ["testserver", "localhost", "127.0.0.1", "api"]
 TEST_DATABASE_URL = config(
@@ -26,3 +26,11 @@ EMAIL_BACKEND = "django.core.mail.backends.locmem.EmailBackend"
 PASSWORD_HASHERS = ["django.contrib.auth.hashers.MD5PasswordHasher"]
 CELERY_TASK_ALWAYS_EAGER = True
 CELERY_TASK_EAGER_PROPAGATES = True
+REST_FRAMEWORK = {
+    **REST_FRAMEWORK,  # noqa: F405
+    "DEFAULT_THROTTLE_RATES": {
+        "login": "1000/min",
+        "password_reset": "1000/min",
+        "upload": "1000/hour",
+    },
+}

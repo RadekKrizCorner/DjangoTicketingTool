@@ -36,6 +36,8 @@ unsupported_attachment_type
 duplicate_membership
 email_already_registered
 password_reset_invalid
+invalid_password
+token_not_valid
 conflict
 ```
 

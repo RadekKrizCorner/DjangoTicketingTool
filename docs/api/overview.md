@@ -74,6 +74,32 @@ Ready health confirms the application can reach required infrastructure:
 }
 ```
 
+## User Management
+
+User accounts use email as the login identifier. Registration normalizes email
+addresses to lowercase and returns the created user under `data`.
+
+JWT endpoints also use the standard success envelope:
+
+```json
+{
+  "data": {
+    "access": "<access-token>",
+    "refresh": "<refresh-token>"
+  }
+}
+```
+
+Logout blacklists the submitted refresh token and returns:
+
+```json
+{
+  "data": {
+    "status": "logged_out"
+  }
+}
+```
+
 ## Response Contract
 
 Success:

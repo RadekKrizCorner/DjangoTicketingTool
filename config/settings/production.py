@@ -2,7 +2,7 @@
 
 from decouple import Csv, config
 
-from .base import *  # noqa: F403
+from config.settings.base import *  # noqa: F403
 
 DEBUG = False
 SECRET_KEY = config("DJANGO_SECRET_KEY")

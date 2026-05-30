@@ -17,6 +17,14 @@ POST /api/v1/users/password-reset/confirm/
 GET  /api/v1/users/search/
 ```
 
+Implemented in PROJECT-004. User search requires authentication and returns only:
+
+```text
+id
+email
+display_name
+```
+
 ## Projects
 
 ```text
