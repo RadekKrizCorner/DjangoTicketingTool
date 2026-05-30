@@ -1,4 +1,107 @@
 services:
+  api:
+    build:
+      context: .
+      target: development
+    command: python manage.py runserver 0.0.0.0:8000
+    environment:
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/1
+      DATABASE_URL: postgres://app:app@db:5432/app
+      DJANGO_ALLOWED_HOSTS: localhost,127.0.0.1,testserver,api
+      DJANGO_CORS_ALLOWED_ORIGINS: http://localhost:3000
+      DJANGO_SECRET_KEY: local-development-secret
+      DJANGO_SETTINGS_MODULE: config.settings.local
+      EMAIL_HOST: mailpit
+      EMAIL_PORT: "1025"
+      REDIS_URL: redis://redis:6379/0
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+      - media:/app/media
+    depends_on:
+      - db
+      - redis
+      - mailpit
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "curl -fsS -H \"Host: $${DJANGO_HEALTHCHECK_HOST:-localhost}\" http://127.0.0.1:8000/api/v1/health/live/ || exit 1",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: app
+      POSTGRES_PASSWORD: app
+      POSTGRES_USER: app
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  celery-worker:
+    build:
+      context: .
+      target: development
+    command: celery -A config worker -l info
+    environment:
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/1
+      DATABASE_URL: postgres://app:app@db:5432/app
+      DJANGO_ALLOWED_HOSTS: localhost,127.0.0.1,testserver,api
+      DJANGO_SECRET_KEY: local-development-secret
+      DJANGO_SETTINGS_MODULE: config.settings.local
+      EMAIL_HOST: mailpit
+      EMAIL_PORT: "1025"
+      REDIS_URL: redis://redis:6379/0
+    volumes:
+      - .:/app
+      - media:/app/media
+    depends_on:
+      - db
+      - redis
+      - mailpit
+
+  celery-beat:
+    build:
+      context: .
+      target: development
+    command: celery -A config beat -l info
+    environment:
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/1
+      DATABASE_URL: postgres://app:app@db:5432/app
+      DJANGO_ALLOWED_HOSTS: localhost,127.0.0.1,testserver,api
+      DJANGO_SECRET_KEY: local-development-secret
+      DJANGO_SETTINGS_MODULE: config.settings.local
+      EMAIL_HOST: mailpit
+      EMAIL_PORT: "1025"
+      REDIS_URL: redis://redis:6379/0
+    volumes:
+      - .:/app
+      - media:/app/media
+    depends_on:
+      - db
+      - redis
+      - mailpit
+
+  mailpit:
+    image: axllent/mailpit:latest
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+
   docs:
     image: squidfunk/mkdocs-material:9
     command: serve --dev-addr=0.0.0.0:8000
@@ -7,3 +110,7 @@ services:
     volumes:
       - .:/docs
     working_dir: /docs
+
+volumes:
+  media:
+  postgres_data:

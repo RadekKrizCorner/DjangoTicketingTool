@@ -14,7 +14,13 @@ mailpit
 docs
 ```
 
-Current documentation-only milestone includes only the `docs` service.
+The local development stack now includes all of these services. The API image is
+built from the local `Dockerfile`, mounts the repository into `/app`, and stores
+uploaded media in the `media` Docker volume.
+
+The default Dockerfile target is the production runtime image and uses
+`config.settings.production`. Docker Compose builds the `development` target and
+overrides `DJANGO_SETTINGS_MODULE=config.settings.local` for local development.
 
 ## Application Image
 
