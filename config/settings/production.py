@@ -14,6 +14,9 @@ ALLOWED_HOSTS = [
 CSRF_TRUSTED_ORIGINS = config("DJANGO_CSRF_TRUSTED_ORIGINS", default="", cast=Csv())
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 SECURE_SSL_REDIRECT = config("DJANGO_SECURE_SSL_REDIRECT", default=True, cast=bool)
-SECURE_REDIRECT_EXEMPT = [r"^api/v1/health/live/$"]
+SECURE_REDIRECT_EXEMPT = [
+    r"^api/v1/health/live/$",
+    r"^api/v1/health/ready/$",
+]
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True

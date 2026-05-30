@@ -92,11 +92,14 @@ REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
         "rest_framework_simplejwt.authentication.JWTAuthentication",
     ),
+    "DEFAULT_PAGINATION_CLASS": "apps.api.pagination.StandardPageNumberPagination",
+    "PAGE_SIZE": 20,
     "DEFAULT_FILTER_BACKENDS": (
         "django_filters.rest_framework.DjangoFilterBackend",
         "rest_framework.filters.OrderingFilter",
         "rest_framework.filters.SearchFilter",
     ),
+    "EXCEPTION_HANDLER": "apps.api.exceptions.custom_exception_handler",
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
 }
 
@@ -113,6 +116,7 @@ CORS_ALLOWED_ORIGINS = config(
 )
 
 REDIS_URL = config("REDIS_URL", default="redis://redis:6379/0")
+HEALTH_REDIS_URL = config("HEALTH_REDIS_URL", default="")
 CELERY_BROKER_URL = config("CELERY_BROKER_URL", default=REDIS_URL)
 CELERY_RESULT_BACKEND = config("CELERY_RESULT_BACKEND", default="redis://redis:6379/1")
 CELERY_TASK_DEFAULT_QUEUE = "default"

@@ -1,6 +1,8 @@
 """Tests for the initial Django project bootstrap."""
 
+import json
 import os
+import re
 import subprocess
 import sys
 
@@ -31,6 +33,31 @@ def _import_module_without_settings(module_name):
         text=True,
     )
     return result.stdout.strip()
+
+
+def _read_production_setting(setting_name):
+    """Read one production setting in a clean subprocess."""
+    env = os.environ.copy()
+    env.pop("DJANGO_SETTINGS_MODULE", None)
+    env["DJANGO_ALLOWED_HOSTS"] = "example.test"
+    env["DJANGO_SECRET_KEY"] = "subprocess-test-secret"
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            (
+                "import json;"
+                "from config.settings import production;"
+                f"print(json.dumps(getattr(production, '{setting_name}')))"
+            ),
+        ],
+        check=True,
+        capture_output=True,
+        env=env,
+        text=True,
+    )
+    return json.loads(result.stdout)
 
 
 def test_django_settings_load():
@@ -69,3 +96,17 @@ def test_test_settings_define_explicit_database_strategy():
 
     assert database["CONN_MAX_AGE"] == 0
     assert database["TEST"]["NAME"] == "test_app"
+
+
+def test_production_health_paths_are_ssl_redirect_exempt():
+    """Verify production exempts exact health probe paths from SSL redirects."""
+    exemptions = _read_production_setting("SECURE_REDIRECT_EXEMPT")
+
+    assert exemptions == [
+        r"^api/v1/health/live/$",
+        r"^api/v1/health/ready/$",
+    ]
+    assert any(re.match(pattern, "api/v1/health/live/") for pattern in exemptions)
+    assert any(re.match(pattern, "api/v1/health/ready/") for pattern in exemptions)
+    assert not any(re.match(pattern, "api/v1/health/live/extra") for pattern in exemptions)
+    assert not any(re.match(pattern, "api/v1/health/ready/extra") for pattern in exemptions)

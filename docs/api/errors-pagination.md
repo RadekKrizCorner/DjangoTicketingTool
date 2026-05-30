@@ -86,6 +86,9 @@ Rules:
 
 - Default `page_size=20`.
 - Maximum `page_size=100`.
+- Requests above the maximum `page_size` return `400`.
+- Paginated list responses always place records under `data`.
+- Pagination metadata is always under `meta.pagination`.
 - Invalid `page` or `page_size` returns `400`.
 - Default ordering must be stable, usually `-created_at, id`.
 

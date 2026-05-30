@@ -56,6 +56,11 @@ Readiness checks for dependent services use:
 /api/v1/health/ready/
 ```
 
+The readiness response includes database and Redis status under `data` so
+orchestrators can distinguish process health from dependency availability.
+Redis readiness uses `HEALTH_REDIS_URL` when set, then falls back to `REDIS_URL`,
+then `CELERY_BROKER_URL`.
+
 ## Storage Protection
 
 Attachments must not share an unbounded host root filesystem path.

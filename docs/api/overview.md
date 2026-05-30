@@ -23,6 +23,7 @@ Anonymous users may access only endpoints that do not reveal concrete applicatio
 
 ```text
 /api/v1/health/live/
+/api/v1/health/ready/
 /api/v1/schema/
 /api/v1/docs/
 /api/v1/redoc/
@@ -40,6 +41,38 @@ OpenAPI schema and documentation are public.
 
 The schema exposes request and response contracts. It does not expose projects,
 tasks, comments, users, memberships, attachments, notifications, or audit data.
+
+Public documentation routes:
+
+```text
+/api/v1/schema/
+/api/v1/docs/
+/api/v1/redoc/
+```
+
+## Health
+
+Live health confirms the application process can respond:
+
+```json
+{
+  "data": {
+    "status": "ok"
+  }
+}
+```
+
+Ready health confirms the application can reach required infrastructure:
+
+```json
+{
+  "data": {
+    "status": "ok",
+    "database": "ok",
+    "redis": "ok"
+  }
+}
+```
 
 ## Response Contract
 
