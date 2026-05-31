@@ -1,8 +1,10 @@
 """Project API URL routes."""
 
-from django.urls import path
+from django.urls import include, path
 from django.urls.resolvers import URLPattern
 
+import apps.attachments.api.views as attachment_views
+import apps.tasks.api.urls as task_api_urls
 from apps.projects.api.views import (
     ProjectAuditLogView,
     ProjectCloseScheduleView,
@@ -44,5 +46,16 @@ urlpatterns: list[URLPattern] = [
         "<int:project_id>/members/<int:membership_id>/",
         ProjectMemberDetailView.as_view(),
         name="project-member-detail",
+    ),
+    path("<int:project_id>/tasks/", include(task_api_urls)),
+    path(
+        "<int:project_id>/tasks/<int:task_id>/attachments/",
+        attachment_views.TaskAttachmentListCreateView.as_view(),
+        name="project-task-attachment-list",
+    ),
+    path(
+        "<int:project_id>/tasks/<int:task_id>/comments/<int:comment_id>/attachments/",
+        attachment_views.CommentAttachmentListCreateView.as_view(),
+        name="project-task-comment-attachment-list",
     ),
 ]

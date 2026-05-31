@@ -66,6 +66,9 @@ GET    /api/v1/tasks/my/
 GET    /api/v1/tasks/due-soon/
 ```
 
+Implemented in PROJECT-006. Task mutations require `owner`, `manager`, or
+`member` role and are blocked after project closure.
+
 ## Comments
 
 ```text
@@ -75,6 +78,10 @@ GET    /api/v1/projects/{project_id}/tasks/{task_id}/comments/{comment_id}/
 PATCH  /api/v1/projects/{project_id}/tasks/{task_id}/comments/{comment_id}/
 DELETE /api/v1/projects/{project_id}/tasks/{task_id}/comments/{comment_id}/
 ```
+
+Implemented in PROJECT-006. Members can comment on private projects. Public
+projects can additionally allow all authenticated users through
+`public_comment_policy=authenticated_users`.
 
 ## Attachments
 
@@ -86,6 +93,9 @@ POST   /api/v1/projects/{project_id}/tasks/{task_id}/comments/{comment_id}/attac
 GET    /api/v1/attachments/{attachment_id}/download/
 DELETE /api/v1/attachments/{attachment_id}/
 ```
+
+Implemented in PROJECT-006. Downloads are authorized through the API and files
+are not exposed directly from `MEDIA_URL`.
 
 ## Notifications
 

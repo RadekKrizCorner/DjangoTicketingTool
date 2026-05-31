@@ -100,3 +100,15 @@ also keep media on a dedicated filesystem, Docker volume, bind mount, or Kuberne
 PVC with a clear capacity limit.
 
 This protects the host root filesystem from being filled by attachments.
+
+## PROJECT-006 Implementation Notes
+
+Attachment uploads validate all of the following before writing a row:
+
+- Per-file size limit.
+- Global active attachment quota.
+- Per-project active attachment quota.
+- Content type and text-file extension allow-list.
+- Parent authorization for task or comment attachments.
+
+Deleting an attachment is a soft delete so auditability is preserved.
