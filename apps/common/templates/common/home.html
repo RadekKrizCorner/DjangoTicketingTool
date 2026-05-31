@@ -1,0 +1,72 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Django Ticketing Tool</title>
+    <meta
+      name="description"
+      content="Public entry point for Radek Kriz's Django Ticketing Tool API and documentation."
+    >
+    <link rel="stylesheet" href="{% static 'common/home.css' %}">
+  </head>
+  <body>
+    <main class="page-shell">
+      <nav class="top-nav" aria-label="Primary">
+        <a class="brand" href="/" aria-label="Django Ticketing Tool home">
+          <span class="brand-mark" aria-hidden="true">RK</span>
+          <span class="brand-name">Django Ticketing Tool</span>
+        </a>
+        <div class="nav-links">
+          <a href="/api/v1/docs/">API</a>
+          <a href="/docs/">Docs</a>
+          <a href="/admin/">Admin</a>
+        </div>
+      </nav>
+
+      <section class="hero" aria-labelledby="home-title">
+        <div class="hero-copy">
+          <h1 id="home-title">Django Ticketing Tool</h1>
+          <p class="hero-summary">
+            A production-shaped Django and DRF backend for projects, tasks,
+            comments, attachments, notifications, audit history, and API-first delivery.
+          </p>
+          <div class="hero-actions" aria-label="Primary destinations">
+            <a class="button button-primary" href="/api/v1/docs/">Swagger</a>
+            <a class="button button-secondary" href="/api/v1/redoc/">ReDoc</a>
+            <a
+              class="button button-secondary"
+              href="https://github.com/RadekKrizCorner/DjangoTicketingTool"
+              rel="noreferrer"
+              target="_blank"
+            >GitHub</a>
+          </div>
+        </div>
+
+        <div class="signal-map" aria-label="Public route map">
+          <span class="domain-label">www.radekkriz.space</span>
+          <span class="signal-node signal-node-projects">Projects</span>
+          <span class="signal-node signal-node-tasks">Tasks</span>
+          <span class="signal-node signal-node-notifications">Notifications</span>
+        </div>
+      </section>
+
+      <section class="link-hub" aria-label="Project links">
+        {% for link in links %}
+          <a
+            class="link-card link-card-{{ link.kind }}"
+            href="{{ link.href }}"
+            {% if link.external %}target="_blank" rel="noreferrer"{% endif %}
+          >
+            <span class="link-index">0{{ forloop.counter }}</span>
+            <span class="link-text">
+              <strong>{{ link.label }}</strong>
+              <span>{{ link.description }}</span>
+            </span>
+          </a>
+        {% endfor %}
+      </section>
+    </main>
+  </body>
+</html>

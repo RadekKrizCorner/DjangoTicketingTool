@@ -1,4 +1,13 @@
 services:
+  web:
+    image: ${WEB_IMAGE:-ghcr.io/owner/repo/web:latest}
+    restart: unless-stopped
+    ports:
+      - "${PUBLIC_PORT:-48137}:80"
+    depends_on:
+      api:
+        condition: service_healthy
+
   api:
     image: ${APP_IMAGE:-ghcr.io/owner/repo/api:latest}
     restart: unless-stopped
@@ -10,7 +19,7 @@ services:
       CELERY_RESULT_BACKEND: redis://redis:6379/1
       DATABASE_URL: postgres://${POSTGRES_USER:-app}:${POSTGRES_PASSWORD:-app}@db:5432/${POSTGRES_DB:-app}
       DEFAULT_FROM_EMAIL: ${DEFAULT_FROM_EMAIL:-noreply@example.test}
-      DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:-localhost,127.0.0.1,api}
+      DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:-radekkriz.space,www.radekkriz.space,localhost,127.0.0.1,api}
       DJANGO_CORS_ALLOWED_ORIGINS: ${DJANGO_CORS_ALLOWED_ORIGINS:-}
       DJANGO_CSRF_TRUSTED_ORIGINS: ${DJANGO_CSRF_TRUSTED_ORIGINS:-}
       DJANGO_HEALTHCHECK_HOST: ${DJANGO_HEALTHCHECK_HOST:-localhost}
@@ -21,8 +30,8 @@ services:
       EMAIL_PORT: ${EMAIL_PORT:-1025}
       HEALTH_REDIS_URL: redis://redis:6379/0
       REDIS_URL: redis://redis:6379/0
-    ports:
-      - "${API_PORT:-8000}:8000"
+    expose:
+      - "8000"
     volumes:
       - media:/app/media
     depends_on:
@@ -41,8 +50,6 @@ services:
       interval: 30s
       timeout: 5s
       retries: 3
-    storage_opt:
-      size: ${APP_CONTAINER_STORAGE_LIMIT:-1G}
 
   celery-worker:
     image: ${APP_IMAGE:-ghcr.io/owner/repo/api:latest}
@@ -58,8 +65,6 @@ services:
         condition: service_healthy
       mailpit:
         condition: service_started
-    storage_opt:
-      size: ${APP_CONTAINER_STORAGE_LIMIT:-1G}
 
   celery-beat:
     image: ${APP_IMAGE:-ghcr.io/owner/repo/api:latest}
@@ -73,8 +78,6 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-    storage_opt:
-      size: ${APP_CONTAINER_STORAGE_LIMIT:-512M}
 
   migrate:
     image: ${APP_IMAGE:-ghcr.io/owner/repo/api:latest}
@@ -104,8 +107,6 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-    storage_opt:
-      size: ${DB_CONTAINER_STORAGE_LIMIT:-2G}
 
   redis:
     image: redis:7-alpine
@@ -118,17 +119,10 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-    storage_opt:
-      size: ${REDIS_CONTAINER_STORAGE_LIMIT:-512M}
 
   mailpit:
     image: axllent/mailpit:latest
     restart: unless-stopped
-    ports:
-      - "${MAILPIT_SMTP_PORT:-1025}:1025"
-      - "${MAILPIT_WEB_PORT:-8025}:8025"
-    storage_opt:
-      size: ${MAILPIT_CONTAINER_STORAGE_LIMIT:-512M}
 
 volumes:
   celery_beat:

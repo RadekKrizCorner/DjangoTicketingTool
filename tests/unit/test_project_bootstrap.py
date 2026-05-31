@@ -5,9 +5,12 @@ import os
 import re
 import subprocess
 import sys
+from pathlib import Path
 
 from django.conf import settings
 from django.urls import get_resolver
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
 
 
 def _import_module_without_settings(module_name):
@@ -60,6 +63,17 @@ def _read_production_setting(setting_name):
     return json.loads(result.stdout)
 
 
+def _read_release_allowed_hosts_default():
+    """Read the release compose default allowed hosts value."""
+    compose_text = (REPO_ROOT / "docker-compose.release.yml").read_text()
+    allowed_hosts_pattern = (
+        r"DJANGO_ALLOWED_HOSTS: \$\{DJANGO_ALLOWED_HOSTS:-(?P<hosts>[^}]+)\}"
+    )
+    match = re.search(allowed_hosts_pattern, compose_text)
+    assert match is not None
+    return match.group("hosts").split(",")
+
+
 def test_django_settings_load():
     """Verify Django settings load for the test suite."""
     assert settings.ROOT_URLCONF == "config.urls"
@@ -110,3 +124,14 @@ def test_production_health_paths_are_ssl_redirect_exempt():
     assert any(re.match(pattern, "api/v1/health/ready/") for pattern in exemptions)
     assert not any(re.match(pattern, "api/v1/health/live/extra") for pattern in exemptions)
     assert not any(re.match(pattern, "api/v1/health/ready/extra") for pattern in exemptions)
+
+
+def test_release_compose_defaults_accept_public_cloudflare_hosts():
+    """Verify release compose defaults accept the Cloudflare public hosts."""
+    default_hosts = _read_release_allowed_hosts_default()
+
+    assert "radekkriz.space" in default_hosts
+    assert "www.radekkriz.space" in default_hosts
+    assert "localhost" in default_hosts
+    assert "127.0.0.1" in default_hosts
+    assert "api" in default_hosts

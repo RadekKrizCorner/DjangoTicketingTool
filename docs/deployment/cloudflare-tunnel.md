@@ -52,6 +52,13 @@ DJANGO_CSRF_TRUSTED_ORIGINS
 DJANGO_CORS_ALLOWED_ORIGINS
 ```
 
+For the public `radekkriz.space` and `www.radekkriz.space` hostnames, use:
+
+```text
+DJANGO_ALLOWED_HOSTS=radekkriz.space,www.radekkriz.space,localhost,127.0.0.1
+DJANGO_CSRF_TRUSTED_ORIGINS=https://radekkriz.space,https://www.radekkriz.space
+```
+
 Cloudflare terminates public HTTPS and forwards traffic into the cluster. Django
 should still be configured as if it is behind an HTTPS reverse proxy.
 

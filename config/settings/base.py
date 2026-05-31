@@ -177,6 +177,10 @@ EMAIL_HOST = config("EMAIL_HOST", default="localhost")
 EMAIL_PORT = config("EMAIL_PORT", default=1025, cast=int)
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 DEFAULT_FROM_EMAIL = config("DEFAULT_FROM_EMAIL", default="noreply@example.test")
+PUBLIC_DOCUMENTATION_URL = config(
+    "PUBLIC_DOCUMENTATION_URL",
+    default="http://localhost:8001/",
+)
 
 ATTACHMENT_MAX_FILE_SIZE_BYTES = config(
     "ATTACHMENT_MAX_FILE_SIZE_BYTES",

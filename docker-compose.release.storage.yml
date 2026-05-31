@@ -1,0 +1,28 @@
+services:
+  web:
+    storage_opt:
+      size: ${WEB_CONTAINER_STORAGE_LIMIT:-512M}
+
+  api:
+    storage_opt:
+      size: ${APP_CONTAINER_STORAGE_LIMIT:-1G}
+
+  celery-worker:
+    storage_opt:
+      size: ${APP_CONTAINER_STORAGE_LIMIT:-1G}
+
+  celery-beat:
+    storage_opt:
+      size: ${APP_CONTAINER_STORAGE_LIMIT:-512M}
+
+  db:
+    storage_opt:
+      size: ${DB_CONTAINER_STORAGE_LIMIT:-2G}
+
+  redis:
+    storage_opt:
+      size: ${REDIS_CONTAINER_STORAGE_LIMIT:-512M}
+
+  mailpit:
+    storage_opt:
+      size: ${MAILPIT_CONTAINER_STORAGE_LIMIT:-512M}

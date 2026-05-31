@@ -45,7 +45,10 @@ COPY --from=build /venv /venv
 COPY apps /app/apps
 COPY config /app/config
 COPY manage.py /app/manage.py
-RUN mkdir -p /app/staticfiles /app/media
+RUN mkdir -p /app/staticfiles /app/media \
+  && DJANGO_SECRET_KEY=build-time-static-secret \
+    DJANGO_ALLOWED_HOSTS=localhost \
+    python manage.py collectstatic --noinput
 
 EXPOSE 8000
 

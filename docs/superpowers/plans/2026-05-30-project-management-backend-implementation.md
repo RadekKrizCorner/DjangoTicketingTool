@@ -36,6 +36,8 @@ PROJECT-007 Add notifications, email delivery, and Celery scheduled jobs
 PROJECT-008 Add unit, integration, and e2e coverage hardening
 PROJECT-009 Add GHCR image publishing workflow
 PROJECT-010 Add Kubernetes and deployment artifacts
+PROJECT-011 Add release strategy validation
+PROJECT-012 Add public frontpage and single-port Raspberry release
 ```
 
 ## Final File Structure
@@ -47,6 +49,7 @@ PROJECT-010 Add Kubernetes and deployment artifacts
 ├── README.md
 ├── docker-compose.yml
 ├── docker-compose.release.yml
+├── Dockerfile.web
 ├── manage.py
 ├── mkdocs.yml
 ├── pyproject.toml
@@ -72,7 +75,8 @@ PROJECT-010 Add Kubernetes and deployment artifacts
 │   ├── urls.py
 │   └── wsgi.py
 ├── deploy/
-│   └── k8s/
+│   ├── k8s/
+│   └── release/
 ├── docs/
 └── tests/
     ├── e2e/
@@ -2620,6 +2624,878 @@ git commit -m "PROJECT-010 Add Kubernetes and deployment artifacts"
 
 ---
 
+## Task 11: PROJECT-012 Add Public Frontpage And Single-Port Raspberry Release
+
+**Files:**
+
+- Create: `apps/common/views.py`
+- Create: `apps/common/templates/common/home.html`
+- Create: `apps/common/static/common/home.css`
+- Create: `tests/integration/test_public_homepage.py`
+- Create: `Dockerfile.web`
+- Create: `deploy/release/nginx.conf`
+- Create: `docker-compose.release.storage.yml`
+- Modify: `Dockerfile`
+- Modify: `config/urls.py`
+- Modify: `.github/workflows/ci.yml`
+- Modify: `docker-compose.release.yml`
+- Modify: `README.md`
+- Modify: `docs/deployment/docker.md`
+
+### Steps
+
+- [ ] **Step 1: Approve the visual concept for the frontpage**
+
+Use Image Gen through the frontend builder workflow before writing the homepage
+implementation. Save the accepted concept screenshot as
+`docs/superpowers/specs/2026-05-31-project-012-frontpage-concept.png`.
+
+Use this concept brief:
+
+```text
+Create a modern single-page public frontpage for www.radekkriz.space.
+The page represents "Django Ticketing Tool", a Django/DRF project management and
+ticketing backend by Radek Kriz. The first viewport must feel technical, premium,
+and memorable without becoming a marketing site. Use a dark engineering canvas,
+crisp typography, a code-native system-map visual, teal and amber accents, and
+subtle motion cues. Required destinations: Swagger API docs, ReDoc, OpenAPI
+schema, MkDocs documentation, GitHub, LinkedIn, and Django administration.
+Avoid hero eyebrow badges, filler metrics, generic card clutter, decorative
+orbs, and one-color palettes. The design must be responsive for desktop and
+mobile and leave the link hub visible below the hero on desktop.
+```
+
+- [ ] **Step 2: Write the failing homepage contract test**
+
+Create `tests/integration/test_public_homepage.py`:
+
+```python
+"""Public homepage integration tests."""
+
+import pytest
+
+pytestmark = pytest.mark.integration
+
+
+def test_public_homepage_lists_project_destinations(client):
+    """Verify the homepage exposes the required public project links."""
+    response = client.get("/")
+
+    assert response.status_code == 200
+    html = response.content.decode()
+    assert "Django Ticketing Tool" in html
+    assert 'href="/api/v1/docs/"' in html
+    assert 'href="/api/v1/redoc/"' in html
+    assert 'href="/api/v1/schema/"' in html
+    assert 'href="/docs/"' in html
+    assert 'href="/admin/"' in html
+    assert 'href="https://github.com/RadekKrizCorner/DjangoTicketingTool"' in html
+    assert 'href="https://www.linkedin.com/in/radekkriz/"' in html
+```
+
+- [ ] **Step 3: Run the homepage test and verify it fails**
+
+Run:
+
+```bash
+docker compose run --rm api pytest tests/integration/test_public_homepage.py -v
+```
+
+Expected:
+
+```text
+FAILED tests/integration/test_public_homepage.py::test_public_homepage_lists_project_destinations
+```
+
+- [ ] **Step 4: Add the Django homepage view and root route**
+
+Create `apps/common/views.py`:
+
+```python
+"""Public non-API views."""
+
+from django.conf import settings
+from django.http import HttpRequest, HttpResponse, HttpResponseRedirect
+from django.shortcuts import redirect, render
+
+
+def home_page(request: HttpRequest) -> HttpResponse:
+    """Render the public project landing page."""
+    links = [
+        {
+            "label": "Swagger API Docs",
+            "href": "/api/v1/docs/",
+            "description": "Explore and test the REST API in the browser.",
+            "kind": "api",
+            "external": False,
+        },
+        {
+            "label": "ReDoc",
+            "href": "/api/v1/redoc/",
+            "description": "Read the API contract in a structured reference view.",
+            "kind": "api",
+            "external": False,
+        },
+        {
+            "label": "OpenAPI Schema",
+            "href": "/api/v1/schema/",
+            "description": "Download the machine-readable API schema.",
+            "kind": "api",
+            "external": False,
+        },
+        {
+            "label": "MkDocs",
+            "href": "/docs/",
+            "description": "Open project architecture, deployment, and product docs.",
+            "kind": "docs",
+            "external": False,
+        },
+        {
+            "label": "GitHub",
+            "href": "https://github.com/RadekKrizCorner/DjangoTicketingTool",
+            "description": "View the source code and project history.",
+            "kind": "external",
+            "external": True,
+        },
+        {
+            "label": "LinkedIn",
+            "href": "https://www.linkedin.com/in/radekkriz/",
+            "description": "Open Radek Kriz's professional profile.",
+            "kind": "external",
+            "external": True,
+        },
+        {
+            "label": "Django Admin",
+            "href": "/admin/",
+            "description": "Manage the application through Django administration.",
+            "kind": "admin",
+            "external": False,
+        },
+    ]
+    return render(request, "common/home.html", {"links": links})
+
+
+def docs_page(_request: HttpRequest) -> HttpResponseRedirect:
+    """Redirect local Django docs path to the configured documentation site."""
+    return redirect(settings.PUBLIC_DOCUMENTATION_URL)
+```
+
+Modify `config/urls.py`:
+
+```python
+"""Root URL configuration for the project."""
+
+from django.contrib import admin
+from django.urls import include, path
+from django.urls.resolvers import URLPattern, URLResolver
+
+from apps.common.views import docs_page, home_page
+
+urlpatterns: list[URLPattern | URLResolver] = [
+    path("", home_page, name="home"),
+    path("docs/", docs_page, name="docs"),
+    path("admin/", admin.site.urls),
+    path("api/v1/", include("config.api_urls")),
+]
+```
+
+- [ ] **Step 5: Add the single-page template and modern visual styling**
+
+Create `apps/common/templates/common/home.html`:
+
+```html
+{% load static %}
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Django Ticketing Tool</title>
+    <meta
+      name="description"
+      content="Public entry point for Radek Kriz's Django Ticketing Tool API and documentation."
+    >
+    <link rel="stylesheet" href="{% static 'common/home.css' %}">
+  </head>
+  <body>
+    <main class="page-shell">
+      <nav class="top-nav" aria-label="Primary">
+        <a class="brand" href="/" aria-label="Django Ticketing Tool home">
+          <span class="brand-mark" aria-hidden="true">RK</span>
+          <span>Django Ticketing Tool</span>
+        </a>
+        <a class="nav-action" href="/api/v1/docs/">Open API</a>
+      </nav>
+
+      <section class="hero" aria-labelledby="home-title">
+        <div class="hero-copy">
+          <p class="terminal-line">www.radekkriz.space</p>
+          <h1 id="home-title">Django Ticketing Tool</h1>
+          <p class="hero-summary">
+            A production-shaped Django and DRF backend for projects, tickets,
+            attachments, notifications, audit history, and API-first delivery.
+          </p>
+          <div class="hero-actions" aria-label="Primary destinations">
+            <a class="button button-primary" href="/api/v1/docs/">Swagger</a>
+            <a class="button button-secondary" href="/docs/">MkDocs</a>
+            <a
+              class="button button-secondary"
+              href="https://github.com/RadekKrizCorner/DjangoTicketingTool"
+              rel="noreferrer"
+              target="_blank"
+            >GitHub</a>
+          </div>
+        </div>
+
+        <div class="signal-map" aria-hidden="true">
+          <div class="signal-node signal-node-projects">Projects</div>
+          <div class="signal-node signal-node-tasks">Tasks</div>
+          <div class="signal-node signal-node-notifications">Notifications</div>
+        </div>
+      </section>
+
+      <section class="link-hub" aria-label="Project links">
+        {% for link in links %}
+          <a
+            class="link-card link-card-{{ link.kind }}"
+            href="{{ link.href }}"
+            {% if link.external %}target="_blank" rel="noreferrer"{% endif %}
+          >
+            <span class="link-index">0{{ forloop.counter }}</span>
+            <span class="link-text">
+              <strong>{{ link.label }}</strong>
+              <span>{{ link.description }}</span>
+            </span>
+          </a>
+        {% endfor %}
+      </section>
+    </main>
+  </body>
+</html>
+```
+
+Create `apps/common/static/common/home.css`:
+
+```css
+:root {
+  color-scheme: dark;
+  --bg: #07090f;
+  --panel: rgba(15, 23, 42, 0.72);
+  --panel-strong: rgba(248, 250, 252, 0.08);
+  --text: #f8fafc;
+  --muted: #9aa7b8;
+  --line: rgba(148, 163, 184, 0.22);
+  --teal: #1dd6c2;
+  --amber: #ffb020;
+  --rose: #ff6b8a;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  min-height: 100vh;
+  margin: 0;
+  background:
+    linear-gradient(120deg, rgba(29, 214, 194, 0.16), transparent 32%),
+    linear-gradient(300deg, rgba(255, 176, 32, 0.14), transparent 38%),
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.035) 0 1px, transparent 1px 120px),
+    repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.028) 0 1px, transparent 1px 120px),
+    var(--bg);
+  color: var(--text);
+  font-family:
+    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.page-shell {
+  width: min(1180px, calc(100% - 40px));
+  min-height: 100vh;
+  margin: 0 auto;
+  padding: 28px 0 56px;
+}
+
+.top-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.brand,
+.nav-action,
+.button,
+.link-card {
+  border: 1px solid var(--line);
+  background: var(--panel);
+  backdrop-filter: blur(22px);
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+  padding: 8px 14px 8px 8px;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.brand-mark {
+  display: inline-grid;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  border-radius: 7px;
+  background: linear-gradient(135deg, var(--teal), var(--amber));
+  color: #071015;
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+
+.nav-action {
+  min-height: 40px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  color: var(--teal);
+  font-size: 0.9rem;
+  font-weight: 750;
+}
+
+.hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(340px, 0.74fr);
+  gap: 42px;
+  align-items: center;
+  min-height: 68vh;
+  padding: 64px 0 34px;
+}
+
+.terminal-line {
+  width: fit-content;
+  margin: 0 0 18px;
+  padding: 7px 10px;
+  border-left: 2px solid var(--teal);
+  color: var(--teal);
+  background: rgba(29, 214, 194, 0.08);
+  font-family: "SFMono-Regular", Consolas, monospace;
+  font-size: 0.86rem;
+}
+
+h1 {
+  max-width: 760px;
+  margin: 0;
+  font-size: clamp(3rem, 8vw, 6.8rem);
+  line-height: 0.9;
+  letter-spacing: 0;
+}
+
+.hero-summary {
+  max-width: 650px;
+  margin: 26px 0 0;
+  color: var(--muted);
+  font-size: clamp(1rem, 2vw, 1.22rem);
+  line-height: 1.7;
+}
+
+.hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 34px;
+}
+
+.button {
+  min-height: 48px;
+  padding: 14px 18px;
+  border-radius: 8px;
+  font-weight: 800;
+}
+
+.button-primary {
+  border-color: transparent;
+  background: linear-gradient(135deg, var(--teal), var(--amber));
+  color: #071015;
+}
+
+.button-secondary:hover,
+.nav-action:hover,
+.link-card:hover {
+  border-color: rgba(29, 214, 194, 0.64);
+  transform: translateY(-2px);
+}
+
+.signal-map {
+  position: relative;
+  min-height: 430px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background:
+    linear-gradient(135deg, rgba(248, 250, 252, 0.08), rgba(248, 250, 252, 0.02)),
+    repeating-linear-gradient(90deg, rgba(29, 214, 194, 0.14) 0 1px, transparent 1px 54px),
+    repeating-linear-gradient(0deg, rgba(255, 176, 32, 0.12) 0 1px, transparent 1px 54px);
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.32);
+}
+
+.signal-map::after {
+  position: absolute;
+  inset: 17% 10% 14%;
+  z-index: 1;
+  content: "";
+  pointer-events: none;
+  background:
+    radial-gradient(
+      ellipse at 34% 50%,
+      transparent 42%,
+      rgba(29, 214, 194, 0.42) 43%,
+      rgba(29, 214, 194, 0.42) 45%,
+      transparent 47%
+    ),
+    radial-gradient(
+      ellipse at 66% 50%,
+      transparent 42%,
+      rgba(255, 176, 32, 0.36) 43%,
+      rgba(255, 176, 32, 0.36) 45%,
+      transparent 47%
+    );
+  filter: drop-shadow(0 0 16px rgba(29, 214, 194, 0.22));
+  opacity: 0.82;
+  transform: rotate(-8deg);
+  animation: loop-flow 9s ease-in-out infinite;
+}
+
+.signal-node {
+  position: absolute;
+  z-index: 1;
+  display: grid;
+  width: 92px;
+  height: 92px;
+  place-items: center;
+  border: 1px solid rgba(248, 250, 252, 0.2);
+  border-radius: 8px;
+  background: rgba(7, 9, 15, 0.78);
+  color: var(--text);
+  font-family: "SFMono-Regular", Consolas, monospace;
+  font-size: 0.82rem;
+  font-weight: 850;
+}
+
+.signal-node-projects {
+  top: 60px;
+  left: 56px;
+  color: var(--teal);
+}
+
+.signal-node-tasks {
+  right: 54px;
+  top: 154px;
+  color: var(--amber);
+}
+
+.signal-node-notifications {
+  width: 118px;
+  left: 39%;
+  bottom: 58px;
+  color: var(--rose);
+  font-size: clamp(0.52rem, 1.6vw, 0.68rem);
+}
+
+.link-hub {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.link-card {
+  display: flex;
+  min-height: 154px;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 18px;
+  border-radius: 8px;
+  transition: transform 180ms ease, border-color 180ms ease;
+}
+
+.link-index {
+  color: var(--teal);
+  font-family: "SFMono-Regular", Consolas, monospace;
+  font-size: 0.78rem;
+}
+
+.link-text {
+  display: grid;
+  gap: 8px;
+}
+
+.link-text strong {
+  font-size: 1rem;
+}
+
+.link-text span {
+  color: var(--muted);
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
+@keyframes loop-flow {
+  0%,
+  100% {
+    opacity: 0.58;
+    transform: rotate(-10deg) scale(0.96);
+  }
+
+  50% {
+    opacity: 0.9;
+    transform: rotate(-4deg) scale(1.04);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+  }
+}
+
+@media (max-width: 960px) {
+  .hero,
+  .link-hub {
+    grid-template-columns: 1fr;
+  }
+
+  .hero {
+    min-height: auto;
+    padding-top: 52px;
+  }
+
+  .signal-map {
+    min-height: 330px;
+  }
+}
+
+@media (max-width: 620px) {
+  .page-shell {
+    width: min(100% - 28px, 1180px);
+    padding-top: 18px;
+  }
+
+  .top-nav,
+  .hero-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .brand,
+  .nav-action,
+  .button {
+    justify-content: center;
+    width: 100%;
+  }
+
+  h1 {
+    font-size: clamp(2.55rem, 17vw, 4rem);
+  }
+
+  .link-card {
+    min-height: 124px;
+  }
+}
+```
+
+- [ ] **Step 6: Collect static files in the runtime API image**
+
+Modify the runtime stage in `Dockerfile` so Django admin, drf-spectacular, and
+the new homepage stylesheet are present under `STATIC_ROOT` in production.
+
+Use this runtime tail:
+
+```dockerfile
+COPY --from=build /venv /venv
+COPY apps /app/apps
+COPY config /app/config
+COPY manage.py /app/manage.py
+RUN mkdir -p /app/staticfiles /app/media \
+  && DJANGO_SECRET_KEY=build-time-static-secret \
+    DJANGO_ALLOWED_HOSTS=localhost \
+    python manage.py collectstatic --noinput
+
+EXPOSE 8000
+```
+
+- [ ] **Step 7: Run the homepage test and Django static checks**
+
+Run:
+
+```bash
+docker compose run --rm api pytest tests/integration/test_public_homepage.py -v
+docker compose run --rm api python manage.py check
+docker compose run --rm api python manage.py collectstatic --noinput --dry-run
+```
+
+Expected:
+
+```text
+passed
+System check identified no issues
+Static files collect without errors.
+```
+
+- [ ] **Step 8: Add the web image that serves MkDocs and proxies Django**
+
+Create `Dockerfile.web`:
+
+```dockerfile
+FROM squidfunk/mkdocs-material:9 AS docs-build
+
+WORKDIR /docs
+COPY mkdocs.yml /docs/mkdocs.yml
+COPY docs /docs/docs
+RUN mkdocs build --site-dir /site
+
+FROM nginx:1.27-alpine
+
+COPY deploy/release/nginx.conf /etc/nginx/conf.d/default.conf
+COPY --from=docs-build /site /usr/share/nginx/html/docs
+
+EXPOSE 80
+```
+
+Create `deploy/release/nginx.conf`:
+
+```nginx
+upstream django_api {
+    server api:8000;
+}
+
+map $http_x_forwarded_proto $forwarded_proto {
+    default $http_x_forwarded_proto;
+    "" $scheme;
+}
+
+map $http_x_forwarded_port $forwarded_port {
+    default $http_x_forwarded_port;
+    "" $server_port;
+}
+
+server {
+    listen 80;
+    server_name _;
+    client_max_body_size 2m;
+    root /usr/share/nginx/html;
+
+    location = /docs {
+        return 308 /docs/;
+    }
+
+    location /docs/ {
+        try_files $uri $uri/ /docs/index.html;
+    }
+
+    location /media/ {
+        return 404;
+    }
+
+    location / {
+        proxy_pass http://django_api;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Host $host;
+        proxy_set_header X-Forwarded-Port $forwarded_port;
+        proxy_set_header X-Forwarded-Proto $forwarded_proto;
+        proxy_redirect off;
+    }
+}
+```
+
+- [ ] **Step 9: Update release Compose to expose exactly one public port**
+
+Modify `docker-compose.release.yml` so `web` is the only service with `ports`.
+The `api` service must keep its healthcheck and become internal-only.
+
+Use this public edge service:
+
+```yaml
+  web:
+    image: ${WEB_IMAGE:-ghcr.io/owner/repo/web:latest}
+    restart: unless-stopped
+    ports:
+      - "${PUBLIC_PORT:-48137}:80"
+    depends_on:
+      api:
+        condition: service_healthy
+    storage_opt:
+      size: ${WEB_CONTAINER_STORAGE_LIMIT:-512M}
+```
+
+Replace the `api` public port mapping with an internal expose block:
+
+```yaml
+    expose:
+      - "8000"
+```
+
+Remove the `mailpit` public port mappings from release Compose so SMTP and the
+Mailpit web UI are not exposed from the Raspberry production stack by default:
+
+```yaml
+  mailpit:
+    image: axllent/mailpit:latest
+    restart: unless-stopped
+```
+
+Put Docker writable-layer limits into `docker-compose.release.storage.yml` so
+production hosts that support `storage_opt.size` can enable the guard without
+breaking Docker Desktop or unsupported VPS storage drivers.
+
+- [ ] **Step 10: Publish multi-arch API and web images for Raspberry**
+
+Modify `.github/workflows/ci.yml` so both images publish for `linux/amd64` and
+`linux/arm64`.
+
+Use separate metadata and build steps:
+
+```yaml
+      - name: Extract API Docker metadata
+        id: api-meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}/api
+          tags: |
+            type=sha,prefix=sha-
+            type=ref,event=tag
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Extract web Docker metadata
+        id: web-meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}/web
+          tags: |
+            type=sha,prefix=sha-
+            type=ref,event=tag
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build API image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          target: runtime
+          platforms: linux/amd64,linux/arm64
+          push: ${{ github.event_name == 'push' }}
+          tags: ${{ steps.api-meta.outputs.tags }}
+          labels: ${{ steps.api-meta.outputs.labels }}
+          cache-from: type=gha,scope=api
+          cache-to: type=gha,mode=max,scope=api
+
+      - name: Build web image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile.web
+          platforms: linux/amd64,linux/arm64
+          push: ${{ github.event_name == 'push' }}
+          tags: ${{ steps.web-meta.outputs.tags }}
+          labels: ${{ steps.web-meta.outputs.labels }}
+          cache-from: type=gha,scope=web
+          cache-to: type=gha,mode=max,scope=web
+```
+
+- [ ] **Step 11: Document the Raspberry release environment**
+
+Update `README.md` and `docs/deployment/docker.md` with this release example:
+
+```bash
+export APP_IMAGE=ghcr.io/radekkrizcorner/djangoticketingtool/api:latest
+export WEB_IMAGE=ghcr.io/radekkrizcorner/djangoticketingtool/web:latest
+export PUBLIC_PORT=48137
+export DJANGO_SECRET_KEY="$(openssl rand -hex 32)"
+export DJANGO_ALLOWED_HOSTS=www.radekkriz.space,localhost,127.0.0.1
+export DJANGO_CSRF_TRUSTED_ORIGINS=http://www.radekkriz.space:48137,https://www.radekkriz.space
+export DJANGO_SECURE_SSL_REDIRECT=false
+docker compose -f docker-compose.release.yml --profile tools run --rm migrate
+docker compose -f docker-compose.release.yml up -d web api celery-worker celery-beat
+```
+
+Add this note:
+
+```text
+For direct HTTP on port 48137, keep DJANGO_SECURE_SSL_REDIRECT=false.
+If www.radekkriz.space is terminated through HTTPS before this Compose stack,
+set DJANGO_SECURE_SSL_REDIRECT=true and keep
+DJANGO_CSRF_TRUSTED_ORIGINS=https://www.radekkriz.space.
+```
+
+- [ ] **Step 12: Verify the one-port release locally**
+
+Run:
+
+```bash
+docker build -t rkriz-api:project-012 .
+docker build -f Dockerfile.web -t rkriz-web:project-012 .
+docker compose -f docker-compose.release.yml config
+APP_IMAGE=rkriz-api:project-012 \
+WEB_IMAGE=rkriz-web:project-012 \
+PUBLIC_PORT=48137 \
+DJANGO_SECRET_KEY=local-release-secret \
+DJANGO_ALLOWED_HOSTS=localhost,127.0.0.1,www.radekkriz.space \
+DJANGO_CSRF_TRUSTED_ORIGINS=http://localhost:48137,http://www.radekkriz.space:48137 \
+DJANGO_SECURE_SSL_REDIRECT=false \
+docker compose -f docker-compose.release.yml --profile tools run --rm migrate
+APP_IMAGE=rkriz-api:project-012 \
+WEB_IMAGE=rkriz-web:project-012 \
+PUBLIC_PORT=48137 \
+DJANGO_SECRET_KEY=local-release-secret \
+DJANGO_ALLOWED_HOSTS=localhost,127.0.0.1,www.radekkriz.space \
+DJANGO_CSRF_TRUSTED_ORIGINS=http://localhost:48137,http://www.radekkriz.space:48137 \
+DJANGO_SECURE_SSL_REDIRECT=false \
+docker compose -f docker-compose.release.yml up -d web api celery-worker celery-beat
+curl -fsS http://127.0.0.1:48137/
+curl -fsS http://127.0.0.1:48137/docs/
+curl -fsS http://127.0.0.1:48137/api/v1/docs/
+curl -fsSI http://127.0.0.1:48137/admin/
+docker compose -f docker-compose.release.yml down
+```
+
+Expected:
+
+```text
+Release Compose config renders successfully.
+The homepage returns 200 on port 48137.
+MkDocs returns 200 under /docs/.
+Swagger returns 200 under /api/v1/docs/.
+Django admin returns a non-5xx response under /admin/.
+```
+
+Open `http://127.0.0.1:48137/` in Browser/IAB and verify desktop and mobile
+viewports. The accepted concept and browser screenshot must be compared with
+`view_image`; fix visible copy, layout, color, spacing, motion, and responsive
+drift before committing.
+
+- [ ] **Step 13: Commit milestone**
+
+Run:
+
+```bash
+git add .github Dockerfile Dockerfile.web deploy docker-compose.release.yml README.md docs apps/common config tests/integration/test_public_homepage.py
+git commit -m "PROJECT-012 Add public frontpage and single-port release"
+```
+
+---
+
 ## Final Verification Before Delivery
 
 Run:
@@ -2636,6 +3512,21 @@ curl -fsS http://127.0.0.1:8000/api/v1/health/ready/
 curl -fsS http://127.0.0.1:8000/api/v1/schema/
 curl -fsS http://127.0.0.1:8001/
 docker compose down
+docker build -t rkriz-api:final .
+docker build -f Dockerfile.web -t rkriz-web:final .
+export APP_IMAGE=rkriz-api:final
+export WEB_IMAGE=rkriz-web:final
+export PUBLIC_PORT=48137
+export DJANGO_SECRET_KEY=final-release-secret
+export DJANGO_ALLOWED_HOSTS=localhost,127.0.0.1,www.radekkriz.space
+export DJANGO_CSRF_TRUSTED_ORIGINS=http://localhost:48137,http://www.radekkriz.space:48137
+export DJANGO_SECURE_SSL_REDIRECT=false
+docker compose -f docker-compose.release.yml --profile tools run --rm migrate
+docker compose -f docker-compose.release.yml up -d web api celery-worker celery-beat
+curl -fsS http://127.0.0.1:48137/
+curl -fsS http://127.0.0.1:48137/docs/
+curl -fsS http://127.0.0.1:48137/api/v1/docs/
+docker compose -f docker-compose.release.yml down
 ```
 
 Expected:
@@ -2645,6 +3536,7 @@ All tests pass.
 Health endpoints return 200.
 OpenAPI schema returns 200.
 MkDocs site returns 200.
+Release homepage, MkDocs, and Swagger return 200 through port 48137.
 ```
 
 ## Plan Self-Review
@@ -2679,12 +3571,19 @@ MkDocs site returns 200.
 | GHCR image publishing | `PROJECT-009` |
 | Kubernetes deploy | `PROJECT-010` |
 | Cloudflare Tunnel docs | `PROJECT-010` |
+| Public root frontpage | `PROJECT-012` |
+| GitHub and LinkedIn public links | `PROJECT-012` |
+| MkDocs and Django on one public port | `PROJECT-012` |
+| Raspberry-compatible multi-arch release images | `PROJECT-012` |
 
 ### Open-Ended Instruction Scan
 
 The plan keeps milestone tasks tied to explicit files, behavior, tests, verification
 commands, and commit messages. Service internals are constrained by required
 signatures, behavior lists, and failing tests written before implementation.
+The public frontpage milestone is constrained by exact destination links, a
+visual concept gate, one-port release routing, ARM64 image publishing, and
+local release curl checks.
 
 ### Type Consistency
 
@@ -2697,9 +3596,10 @@ signatures, behavior lists, and failing tests written before implementation.
 
 ### Plan Rating
 
-Rating: 8.5/10.
+Rating: 8.7/10.
 
 The plan is technically strong and maps the specification to reviewable milestone
-commits. The main risk is implementation size: the backend has many interacting
-domains, so each milestone must stay disciplined and complete its tests before
-moving to the next milestone.
+commits. PROJECT-012 improves the production story by making the app, API docs,
+MkDocs, and admin reachable through one Raspberry-friendly public port. The main
+risks are implementation size, visual fidelity for the "wow" homepage, and the
+final TLS decision for `www.radekkriz.space`.
