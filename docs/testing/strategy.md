@@ -2,7 +2,8 @@
 
 ## Test Types
 
-Use three test categories.
+Use three test categories. Unit and integration tests run in CI by default. E2E tests
+are explicit because they require a running Docker Compose API endpoint.
 
 | Type | Scope |
 | --- | --- |
@@ -20,30 +21,35 @@ integration
 e2e
 ```
 
-Example commands after implementation:
+Example commands:
 
 ```bash
-pytest -m unit
-pytest -m integration
-pytest -m e2e
-pytest
+docker compose run --rm api pytest -m unit -v
+docker compose run --rm api pytest -m integration -v
+docker compose up -d api celery-worker celery-beat mailpit
+E2E_BASE_URL=http://127.0.0.1:8000 docker compose run --rm api pytest -m e2e -v
+docker compose down
 ```
 
 ## Parametrization
 
 Use `pytest-kwparametrize` for finite behavior matrices.
 
-Required matrices:
+Required matrices covered by the suite:
 
 - project role vs action vs expected status
+- task role vs action vs project state
+- comment role vs author relation
+- attachment parent vs role vs project state
+- public/private visibility vs authentication state
 - task status transition matrix
-- assignee and actor role matrix
-- project state vs task write behavior
 - attachment type and size validation
 - quota validation
 - password reset cases
-- public/private visibility cases
 - background job idempotency cases
+
+All finite behavior matrices use `pytest.mark.kwparametrize` so each case names the
+inputs and expected outcome directly.
 
 ## What Not To Test
 
@@ -72,3 +78,8 @@ End-to-end tests should cover:
 - schedule publish
 - trigger due background job
 - verify notification/email side effect
+
+The current smoke test covers registration, login, project creation, membership,
+task creation, workflow transition, comment creation, comment attachment upload,
+and publish scheduling. Deeper async side-effect checks stay in integration tests
+because they can run deterministically with Celery eager mode.
