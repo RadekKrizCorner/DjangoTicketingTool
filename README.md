@@ -94,3 +94,14 @@ kubectl apply -f deploy/k8s/ingress.yaml
 
 Use `deploy/k8s/cloudflared-deployment.example.yaml` when the cluster has no
 public IP address and the API should be exposed through Cloudflare Tunnel.
+
+## Git Policy
+
+Normal merge requests target `release`. `master` contains released code and should
+accept only merge requests from `release` or `hotfix/*`.
+
+Enable local commit title validation:
+
+```bash
+git config core.hooksPath .githooks
+```

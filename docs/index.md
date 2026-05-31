@@ -16,6 +16,7 @@ notifications, scheduled publishing, scheduled closing, and audit logs.
 - GHCR for public application images after implementation.
 - Kubernetes manifests for deployability.
 - MkDocs Material for project documentation.
+- `release` as the integration branch and `master` as the release branch.
 - Strict separation between API schema, HTTP layer, business services, selectors,
   policies, and persistence.
 

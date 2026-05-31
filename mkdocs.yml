@@ -33,6 +33,8 @@ nav:
       - Redis HA: decisions/redis-ha.md
   - Testing:
       - Strategy: testing/strategy.md
+  - Development:
+      - Release Strategy: development/release-strategy.md
   - Deployment:
       - Docker: deployment/docker.md
       - Kubernetes: deployment/kubernetes.md
