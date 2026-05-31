@@ -154,6 +154,24 @@ CELERY_BROKER_URL = config("CELERY_BROKER_URL", default=REDIS_URL)
 CELERY_RESULT_BACKEND = config("CELERY_RESULT_BACKEND", default="redis://redis:6379/1")
 CELERY_TASK_DEFAULT_QUEUE = "default"
 CELERY_TIMEZONE = TIME_ZONE
+CELERY_BEAT_SCHEDULE = {
+    "publish-due-projects": {
+        "task": "apps.notifications.tasks.publish_due_projects",
+        "schedule": 60.0,
+    },
+    "close-due-projects": {
+        "task": "apps.notifications.tasks.close_due_projects",
+        "schedule": 60.0,
+    },
+    "send-deadline-reminders": {
+        "task": "apps.notifications.tasks.send_deadline_reminders",
+        "schedule": 900.0,
+    },
+    "send-pending-emails": {
+        "task": "apps.notifications.tasks.send_pending_emails",
+        "schedule": 60.0,
+    },
+}
 
 EMAIL_HOST = config("EMAIL_HOST", default="localhost")
 EMAIL_PORT = config("EMAIL_PORT", default=1025, cast=int)

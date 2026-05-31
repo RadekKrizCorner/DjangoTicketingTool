@@ -6,6 +6,9 @@ Use Celery with database-backed scheduling state.
 
 Do not rely on long-running ETA tasks for project publishing or project closing.
 
+PROJECT-007 implements Celery Beat jobs for project publishing, project closing,
+task deadline reminders, and pending email delivery.
+
 ## Justification
 
 Publishing and closing are business states, so their schedule must live in the

@@ -105,6 +105,9 @@ POST /api/v1/notifications/{notification_id}/read/
 POST /api/v1/notifications/read-all/
 ```
 
+Implemented in PROJECT-007. Notification rows are user-scoped and scheduled jobs
+create notifications idempotently through dedupe keys.
+
 ## Health
 
 ```text
