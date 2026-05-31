@@ -74,3 +74,23 @@ docker compose -f docker-compose.release.yml up -d api celery-worker celery-beat
 
 `docker-compose.release.yml` keeps the same upload quotas as the application
 specification: 1 MB per file, 200 MB globally, and 20 MB per project.
+
+## Kubernetes
+
+Kubernetes manifests are available in `deploy/k8s/`:
+
+```bash
+kubectl apply -f deploy/k8s/namespace.yaml
+kubectl apply -f deploy/k8s/configmap.yaml
+kubectl apply -f /path/to/secret.yaml
+kubectl apply -f deploy/k8s/media-pvc.yaml
+kubectl apply -f deploy/k8s/migrate-job.yaml
+kubectl apply -f deploy/k8s/api-deployment.yaml
+kubectl apply -f deploy/k8s/celery-worker-deployment.yaml
+kubectl apply -f deploy/k8s/celery-beat-deployment.yaml
+kubectl apply -f deploy/k8s/service.yaml
+kubectl apply -f deploy/k8s/ingress.yaml
+```
+
+Use `deploy/k8s/cloudflared-deployment.example.yaml` when the cluster has no
+public IP address and the API should be exposed through Cloudflare Tunnel.
