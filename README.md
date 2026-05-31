@@ -1,14 +1,35 @@
 # RKRIZ Project Management Backend
 
-Documentation-first milestone for a Django/DRF project management backend.
+Django/DRF project management backend with JWT users, projects, memberships,
+tasks, comments, attachments, audit logs, notifications, and Celery scheduling.
 
-The backend implementation is intentionally not present yet. This repository starts
-with the product specification, architecture decisions, API contract, and delivery
-constraints so the implementation can be reviewed and planned before code is written.
+## Local Development
+
+Run the API, PostgreSQL, Redis, Celery, Mailpit, and docs containers:
+
+```bash
+docker compose up --build
+```
+
+Then open:
+
+```text
+API: http://localhost:8000/api/v1/
+OpenAPI: http://localhost:8000/api/v1/docs/
+Mailpit: http://localhost:8025
+Docs: http://localhost:8001
+```
+
+Run migrations and tests:
+
+```bash
+docker compose run --rm api python manage.py migrate
+docker compose run --rm api pytest -m "unit or integration" -q
+```
 
 ## View Documentation
 
-Run the MkDocs documentation site:
+Run only the MkDocs documentation site:
 
 ```bash
 docker compose up docs
@@ -20,16 +41,36 @@ Then open:
 http://localhost:8001
 ```
 
-## First Commit
+## Release Image
 
-Recommended Jira-style commit message for this milestone:
+GitHub Actions builds the runtime Docker image and publishes it to GHCR on pushes
+to `master`, `main`, and `v*` tags:
 
 ```text
-RKRIZ-001 Add product specification documentation
+ghcr.io/<owner>/<repo>/api:latest
+ghcr.io/<owner>/<repo>/api:sha-<commit>
+ghcr.io/<owner>/<repo>/api:<tag>
 ```
 
-## Next Step
+After the first publish, set the GHCR package visibility to public in GitHub
+Package settings. Public GHCR packages can be pulled without authentication:
 
-After this specification is reviewed and committed, the next milestone is a detailed
-implementation plan. The implementation plan is intentionally not included in this
-documentation-first milestone.
+```bash
+docker pull ghcr.io/<owner>/<repo>/api:latest
+```
+
+If the package remains private, reviewers must run `docker login ghcr.io` first.
+
+## Release Compose
+
+Run the published image without building locally:
+
+```bash
+export APP_IMAGE=ghcr.io/<owner>/<repo>/api:latest
+export DJANGO_SECRET_KEY="$(openssl rand -hex 32)"
+docker compose -f docker-compose.release.yml --profile tools run --rm migrate
+docker compose -f docker-compose.release.yml up -d api celery-worker celery-beat
+```
+
+`docker-compose.release.yml` keeps the same upload quotas as the application
+specification: 1 MB per file, 200 MB globally, and 20 MB per project.

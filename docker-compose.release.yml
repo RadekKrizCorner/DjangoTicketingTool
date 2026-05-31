@@ -1,0 +1,137 @@
+services:
+  api:
+    image: ${APP_IMAGE:-ghcr.io/owner/repo/api:latest}
+    restart: unless-stopped
+    environment: &app_environment
+      ATTACHMENT_MAX_FILE_SIZE_BYTES: ${ATTACHMENT_MAX_FILE_SIZE_BYTES:-1048576}
+      ATTACHMENT_MAX_PROJECT_BYTES: ${ATTACHMENT_MAX_PROJECT_BYTES:-20971520}
+      ATTACHMENT_MAX_TOTAL_BYTES: ${ATTACHMENT_MAX_TOTAL_BYTES:-209715200}
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/1
+      DATABASE_URL: postgres://${POSTGRES_USER:-app}:${POSTGRES_PASSWORD:-app}@db:5432/${POSTGRES_DB:-app}
+      DEFAULT_FROM_EMAIL: ${DEFAULT_FROM_EMAIL:-noreply@example.test}
+      DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:-localhost,127.0.0.1,api}
+      DJANGO_CORS_ALLOWED_ORIGINS: ${DJANGO_CORS_ALLOWED_ORIGINS:-}
+      DJANGO_CSRF_TRUSTED_ORIGINS: ${DJANGO_CSRF_TRUSTED_ORIGINS:-}
+      DJANGO_HEALTHCHECK_HOST: ${DJANGO_HEALTHCHECK_HOST:-localhost}
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:?set DJANGO_SECRET_KEY}
+      DJANGO_SECURE_SSL_REDIRECT: ${DJANGO_SECURE_SSL_REDIRECT:-false}
+      DJANGO_SETTINGS_MODULE: config.settings.production
+      EMAIL_HOST: ${EMAIL_HOST:-mailpit}
+      EMAIL_PORT: ${EMAIL_PORT:-1025}
+      HEALTH_REDIS_URL: redis://redis:6379/0
+      REDIS_URL: redis://redis:6379/0
+    ports:
+      - "${API_PORT:-8000}:8000"
+    volumes:
+      - media:/app/media
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      mailpit:
+        condition: service_started
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "curl -fsS -H \"Host: $${DJANGO_HEALTHCHECK_HOST:-localhost}\" http://127.0.0.1:8000/api/v1/health/live/ || exit 1",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    storage_opt:
+      size: ${APP_CONTAINER_STORAGE_LIMIT:-1G}
+
+  celery-worker:
+    image: ${APP_IMAGE:-ghcr.io/owner/repo/api:latest}
+    restart: unless-stopped
+    command: celery -A config worker -l info
+    environment: *app_environment
+    volumes:
+      - media:/app/media
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      mailpit:
+        condition: service_started
+    storage_opt:
+      size: ${APP_CONTAINER_STORAGE_LIMIT:-1G}
+
+  celery-beat:
+    image: ${APP_IMAGE:-ghcr.io/owner/repo/api:latest}
+    restart: unless-stopped
+    command: celery -A config beat -l info --schedule=/app/celerybeat/celerybeat-schedule
+    environment: *app_environment
+    volumes:
+      - celery_beat:/app/celerybeat
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    storage_opt:
+      size: ${APP_CONTAINER_STORAGE_LIMIT:-512M}
+
+  migrate:
+    image: ${APP_IMAGE:-ghcr.io/owner/repo/api:latest}
+    profiles:
+      - tools
+    command: python manage.py migrate --noinput
+    environment: *app_environment
+    volumes:
+      - media:/app/media
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-app}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-app}
+      POSTGRES_USER: ${POSTGRES_USER:-app}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-app} -d $${POSTGRES_DB:-app}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    storage_opt:
+      size: ${DB_CONTAINER_STORAGE_LIMIT:-2G}
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    storage_opt:
+      size: ${REDIS_CONTAINER_STORAGE_LIMIT:-512M}
+
+  mailpit:
+    image: axllent/mailpit:latest
+    restart: unless-stopped
+    ports:
+      - "${MAILPIT_SMTP_PORT:-1025}:1025"
+      - "${MAILPIT_WEB_PORT:-8025}:8025"
+    storage_opt:
+      size: ${MAILPIT_CONTAINER_STORAGE_LIMIT:-512M}
+
+volumes:
+  celery_beat:
+  media:
+  postgres_data:
+  redis_data:
