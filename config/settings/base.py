@@ -107,6 +107,7 @@ TEMPLATES = [
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
+        "apps.accounts.authentication.PersonalAccessTokenAuthentication",
         "rest_framework_simplejwt.authentication.JWTAuthentication",
     ),
     "DEFAULT_PAGINATION_CLASS": "apps.api.pagination.StandardPageNumberPagination",

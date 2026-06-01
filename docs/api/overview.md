@@ -8,7 +8,7 @@
 
 ## Authentication
 
-JWT access tokens are sent through:
+JWT access tokens and personal access tokens are sent through:
 
 ```text
 Authorization: Bearer <token>
@@ -89,6 +89,35 @@ JWT endpoints also use the standard success envelope:
   }
 }
 ```
+
+Personal access tokens are available for script and API-client testing:
+
+```text
+GET    /api/v1/users/personal-tokens/
+POST   /api/v1/users/personal-tokens/
+DELETE /api/v1/users/personal-tokens/{token_id}/
+```
+
+Create returns the raw token once:
+
+```json
+{
+  "data": {
+    "id": 1,
+    "name": "Postman",
+    "token_prefix": "rkriz_pat_abc123...",
+    "token": "rkriz_pat_abc123...",
+    "scopes": ["full_access"],
+    "expires_at": null,
+    "revoked_at": null,
+    "last_used_at": null,
+    "created_at": "2026-06-01T12:00:00Z"
+  }
+}
+```
+
+The server stores only a hash of the raw token. `full_access` allows normal API
+use. `read_only` allows only safe HTTP methods.
 
 Logout blacklists the submitted refresh token and returns:
 

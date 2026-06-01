@@ -3,6 +3,8 @@
 from django.contrib.auth import get_user_model
 from django.db.models import Q, QuerySet
 
+from apps.accounts.models import PersonalAccessToken
+
 
 def active_users() -> QuerySet:
     """Return active users ordered consistently."""
@@ -19,3 +21,8 @@ def search_active_users(term: str | None = None) -> QuerySet:
     return users.filter(
         Q(email__icontains=normalized_term) | Q(display_name__icontains=normalized_term)
     )
+
+
+def personal_access_tokens_for_user(*, user) -> QuerySet[PersonalAccessToken]:
+    """Return personal access tokens owned by a user."""
+    return PersonalAccessToken.objects.filter(user=user).order_by("-created_at", "-id")

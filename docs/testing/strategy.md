@@ -27,9 +27,17 @@ Example commands:
 docker compose run --rm api pytest -m unit -v
 docker compose run --rm api pytest -m integration -v
 docker compose up -d api celery-worker celery-beat mailpit
-E2E_BASE_URL=http://127.0.0.1:8000 docker compose run --rm api pytest -m e2e -v
+docker compose run --rm --no-deps \
+  -e E2E_BASE_URL=http://host.docker.internal:8000 \
+  -e E2E_HOST_HEADER=localhost \
+  api pytest -m e2e -v
 docker compose down
 ```
+
+`E2E_BASE_URL` points from the test container to the running API. `E2E_HOST_HEADER`
+keeps the request compatible with `DJANGO_ALLOWED_HOSTS` when Docker uses a bridge
+hostname such as `host.docker.internal`. The E2E client also defaults this header
+to `localhost` for `host.docker.internal` URLs.
 
 ## Parametrization
 
@@ -79,7 +87,10 @@ End-to-end tests should cover:
 - trigger due background job
 - verify notification/email side effect
 
-The current smoke test covers registration, login, project creation, membership,
-task creation, workflow transition, comment creation, comment attachment upload,
-and publish scheduling. Deeper async side-effect checks stay in integration tests
-because they can run deterministically with Celery eager mode.
+The current E2E suite covers registration, login, project creation, membership,
+task creation, workflow transition, comment creation, comment attachment upload
+and download, publish scheduling, anonymous/public endpoint boundaries, private
+project access boundaries, public project comment policies, personal access token
+scopes and revocation, advanced task filters, notification reads, project close
+write-blocking, and reopen behavior. Deeper async side-effect checks stay in
+integration tests because they can run deterministically with Celery eager mode.

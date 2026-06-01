@@ -11,6 +11,9 @@ POST /api/v1/users/logout/
 GET  /api/v1/users/me/
 GET  /api/v1/users/profile/
 PATCH /api/v1/users/profile/
+GET  /api/v1/users/personal-tokens/
+POST /api/v1/users/personal-tokens/
+DELETE /api/v1/users/personal-tokens/{token_id}/
 POST /api/v1/users/password/
 POST /api/v1/users/password-reset/request/
 POST /api/v1/users/password-reset/confirm/
@@ -24,6 +27,24 @@ id
 email
 display_name
 ```
+
+Implemented in PROJECT-018. Personal access tokens are intended for Postman,
+Python scripts, and other non-browser clients. The raw token is returned only
+from the create endpoint and is stored server-side as a SHA-256 hash. Tokens use
+the same bearer header as JWT:
+
+```text
+Authorization: Bearer rkriz_pat_<secret>
+```
+
+Supported scopes:
+
+```text
+full_access
+read_only
+```
+
+`read_only` tokens can call only `GET`, `HEAD`, and `OPTIONS` endpoints.
 
 ## Projects
 
@@ -42,6 +63,32 @@ PUT    /api/v1/projects/{project_id}/close-schedule/
 DELETE /api/v1/projects/{project_id}/close-schedule/
 GET    /api/v1/projects/{project_id}/audit-log/
 ```
+
+Implemented in PROJECT-019. Project list supports explicit whitelisted filters:
+
+```text
+visibility
+state
+role
+owner_id
+search
+q
+created_after
+created_before
+updated_after
+updated_before
+ordering
+```
+
+`search` and `q` are aliases for the same case-insensitive project text search
+over `name` and `description`. Use `search` for readability and `q` for compact
+client requests. If both are provided, both filters are applied, so clients
+should normally send only one.
+
+Ordering accepts `created_at`, `updated_at`, `name`, `visibility`, `state`, and
+`owner_id`, with optional `-` prefix. Ordering always adds `id` as a stable
+tie-breaker. Filters are applied only after the queryset has been scoped to
+projects visible to the authenticated user.
 
 ## Members
 
@@ -68,6 +115,33 @@ GET    /api/v1/tasks/due-soon/
 
 Implemented in PROJECT-006. Task mutations require `owner`, `manager`, or
 `member` role and are blocked after project closure.
+
+Extended in PROJECT-019. Project task lists, `my` tasks, and `due-soon` tasks
+support explicit whitelisted filters:
+
+```text
+status
+priority
+assignee_id
+search
+q
+due_after
+due_before
+created_after
+created_before
+updated_after
+updated_before
+ordering
+```
+
+`search` and `q` are aliases for the same case-insensitive task text search over
+`title` and `description`. Use `search` for readability and `q` for compact
+client requests. If both are provided, both filters are applied, so clients
+should normally send only one.
+
+Ordering accepts `created_at`, `updated_at`, `title`, `status`, `priority`,
+`due_at`, and `assignee_id`, with optional `-` prefix. Ordering always adds `id`
+as a stable tie-breaker.
 
 ## Comments
 

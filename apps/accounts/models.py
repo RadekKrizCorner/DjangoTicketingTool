@@ -100,3 +100,59 @@ class ExternalIdentity(models.Model):
     def __str__(self) -> str:
         """Return a readable external identity label."""
         return f"{self.provider}:{self.provider_subject}"
+
+
+class PersonalAccessToken(models.Model):
+    """Store a hashed personal API token for scripts and API clients."""
+
+    SCOPE_FULL_ACCESS = "full_access"
+    SCOPE_READ_ONLY = "read_only"
+    READ_ONLY_METHODS = {"GET", "HEAD", "OPTIONS"}
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="personal_access_tokens",
+    )
+    name = models.CharField(max_length=100)
+    token_prefix = models.CharField(max_length=20, db_index=True)
+    token_hash = models.CharField(max_length=64, unique=True)
+    scopes = models.JSONField(default=list)
+    expires_at = models.DateTimeField(null=True, blank=True)
+    revoked_at = models.DateTimeField(null=True, blank=True)
+    last_used_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        """Configure personal access token metadata."""
+
+        ordering = ["-created_at", "-id"]
+        indexes = [
+            models.Index(fields=["user", "-created_at"], name="accounts_pat_user_created_idx"),
+            models.Index(fields=["revoked_at", "expires_at"], name="accounts_pat_status_idx"),
+        ]
+
+    def __str__(self) -> str:
+        """Return a readable personal access token label."""
+        return f"{self.name} ({self.user_id})"
+
+    def is_expired(self) -> bool:
+        """Return whether the token is past its expiry timestamp."""
+        return bool(self.expires_at and self.expires_at <= timezone.now())
+
+    def is_revoked(self) -> bool:
+        """Return whether the token has been revoked."""
+        return self.revoked_at is not None
+
+    def is_usable(self) -> bool:
+        """Return whether the token can authenticate requests."""
+        return bool(self.user.is_active and not self.is_revoked() and not self.is_expired())
+
+    def allows_method(self, method: str) -> bool:
+        """Return whether token scopes allow an HTTP method."""
+        if self.SCOPE_FULL_ACCESS in self.scopes:
+            return True
+        if self.SCOPE_READ_ONLY in self.scopes:
+            return method.upper() in self.READ_ONLY_METHODS
+        return False
