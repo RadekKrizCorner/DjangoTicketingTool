@@ -50,9 +50,15 @@ jobs:
         if: github.event_name == 'pull_request'
         env:
           BASE_REF: ${{ github.base_ref }}
+          HEAD_REF: ${{ github.head_ref }}
         run: |
           git fetch origin "$BASE_REF" --depth=1
-          for commit in $(git rev-list "origin/$BASE_REF..HEAD"); do
+          rev_list_options=""
+          if [ "$BASE_REF" = "master" ] && [ "$HEAD_REF" = "release" ]; then
+            # Release branches already validate original commits before merging.
+            rev_list_options="--no-merges"
+          fi
+          for commit in $(git rev-list $rev_list_options "origin/$BASE_REF..HEAD"); do
             title="$(git log -1 --pretty=%s "$commit")"
             python scripts/validate_commit_message.py --kind commit --value "$title"
           done
