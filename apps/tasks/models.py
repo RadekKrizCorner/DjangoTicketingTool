@@ -76,3 +76,34 @@ class TaskComment(AuditSoftDeleteModel):
     def __str__(self) -> str:
         """Return a readable comment label."""
         return f"Comment {self.id} on task {self.task_id}"
+
+
+class TaskWatcher(AuditSoftDeleteModel):
+    """Represent a user's task watcher subscription."""
+
+    task = models.ForeignKey(Task, on_delete=models.PROTECT, related_name="watchers")
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="task_watchers",
+    )
+
+    class Meta:
+        """Configure watcher ordering and active uniqueness."""
+
+        ordering = ["task_id", "user_id", "id"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["task", "user"],
+                condition=models.Q(deleted_at__isnull=True),
+                name="tasks_active_watcher_task_user_uniq",
+            )
+        ]
+        indexes = [
+            models.Index(fields=["task", "deleted_at"], name="tasks_watcher_task_active_idx"),
+            models.Index(fields=["user", "deleted_at"], name="tasks_watcher_user_active_idx"),
+        ]
+
+    def __str__(self) -> str:
+        """Return a readable watcher label."""
+        return f"{self.task_id}:{self.user_id}"

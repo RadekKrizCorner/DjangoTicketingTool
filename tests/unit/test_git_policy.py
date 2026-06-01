@@ -1,5 +1,7 @@
 """Unit tests for Git metadata policy validation."""
 
+from pathlib import Path
+
 import pytest
 
 from scripts.validate_commit_message import (
@@ -71,3 +73,13 @@ def test_is_allowed_pull_request_target(base_ref, head_ref, expected):
 def test_main_returns_expected_exit_code(argv, expected):
     """Verify the validator CLI returns the expected exit code."""
     assert main(argv) == expected
+
+
+@pytest.mark.unit
+def test_workflow_skips_generated_merge_commit_subjects():
+    """Verify only release-to-master PRs skip generated merge commit subjects."""
+    workflow = Path(".github/workflows/git-policy.yml").read_text(encoding="utf-8")
+
+    assert "HEAD_REF: ${{ github.head_ref }}" in workflow
+    assert 'if [ "$BASE_REF" = "master" ] && [ "$HEAD_REF" = "release" ]; then' in workflow
+    assert 'rev_list_options="--no-merges"' in workflow

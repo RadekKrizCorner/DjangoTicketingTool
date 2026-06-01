@@ -19,6 +19,10 @@ services:
       CELERY_RESULT_BACKEND: redis://redis:6379/1
       DATABASE_URL: postgres://${POSTGRES_USER:-app}:${POSTGRES_PASSWORD:-app}@db:5432/${POSTGRES_DB:-app}
       DEFAULT_FROM_EMAIL: ${DEFAULT_FROM_EMAIL:-noreply@example.test}
+      DEMO_SUPERUSER_DISPLAY_NAME: ${DEMO_SUPERUSER_DISPLAY_NAME:-Demo Admin}
+      DEMO_SUPERUSER_EMAIL: ${DEMO_SUPERUSER_EMAIL:-demo.admin@example.com}
+      DEMO_SUPERUSER_PASSWORD: ${DEMO_SUPERUSER_PASSWORD:-DemoAdmin123!}
+      DEMO_USER_PASSWORD: ${DEMO_USER_PASSWORD:-DemoUser123!}
       DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:-radekkriz.space,www.radekkriz.space,localhost,127.0.0.1,api}
       DJANGO_CORS_ALLOWED_ORIGINS: ${DJANGO_CORS_ALLOWED_ORIGINS:-}
       DJANGO_CSRF_TRUSTED_ORIGINS: ${DJANGO_CSRF_TRUSTED_ORIGINS:-}
@@ -84,6 +88,20 @@ services:
     profiles:
       - tools
     command: python manage.py migrate --noinput
+    environment: *app_environment
+    volumes:
+      - media:/app/media
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  seed-demo:
+    image: ${APP_IMAGE:-ghcr.io/owner/repo/api:latest}
+    profiles:
+      - tools
+    command: python manage.py seed_demo_data
     environment: *app_environment
     volumes:
       - media:/app/media

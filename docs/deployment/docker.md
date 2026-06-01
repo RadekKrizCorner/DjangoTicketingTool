@@ -18,6 +18,18 @@ The local development stack now includes all of these services. The API image is
 built from the local `Dockerfile`, mounts the repository into `/app`, and stores
 uploaded media in the `media` Docker volume.
 
+Create deterministic demo data after migrations:
+
+```bash
+docker compose run --rm api python manage.py seed_demo_data
+```
+
+The command creates the predefined superuser
+`demo.admin@example.com` / `DemoAdmin123!` and demo users, projects,
+memberships, tasks, comments, text attachments, and notifications. Override the
+credentials with `DEMO_SUPERUSER_EMAIL`, `DEMO_SUPERUSER_PASSWORD`,
+`DEMO_SUPERUSER_DISPLAY_NAME`, and `DEMO_USER_PASSWORD`.
+
 The public homepage links to `/docs/`. In local development, Django redirects
 that path to the MkDocs service at `http://localhost:8001/`. In release, Nginx
 serves `/docs/` directly from the web image.
@@ -75,6 +87,8 @@ service with a public port. API and Mailpit stay internal to the Compose network
 Minimal release run:
 
 ```bash
+cp .env_template .env
+# edit .env and replace secrets before starting the stack
 export APP_IMAGE=ghcr.io/radekkrizcorner/djangoticketingtool/api:latest
 export WEB_IMAGE=ghcr.io/radekkrizcorner/djangoticketingtool/web:latest
 export PUBLIC_PORT=48137
@@ -84,6 +98,12 @@ export DJANGO_CSRF_TRUSTED_ORIGINS=http://radekkriz.space:48137,http://www.radek
 export DJANGO_SECURE_SSL_REDIRECT=false
 docker compose -f docker-compose.release.yml --profile tools run --rm migrate
 docker compose -f docker-compose.release.yml up -d web api celery-worker celery-beat
+```
+
+Seed release demo data after migrations:
+
+```bash
+docker compose -f docker-compose.release.yml --profile tools run --rm seed-demo
 ```
 
 On Linux hosts where the Docker storage driver supports writable-layer quotas,
@@ -116,6 +136,8 @@ Use these variables to adapt the stack:
 | `DJANGO_SECURE_SSL_REDIRECT` | Set `true` behind HTTPS reverse proxy. |
 | `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD` | PostgreSQL credentials. |
 | `EMAIL_HOST`, `EMAIL_PORT`, `DEFAULT_FROM_EMAIL` | SMTP delivery settings. |
+| `DEMO_SUPERUSER_EMAIL`, `DEMO_SUPERUSER_PASSWORD`, `DEMO_SUPERUSER_DISPLAY_NAME` | Demo superuser credentials used by `seed_demo_data`. |
+| `DEMO_USER_PASSWORD` | Password assigned to generated non-staff demo users. |
 | `APP_CONTAINER_STORAGE_LIMIT` | Docker writable-layer limit for app containers when the storage override is used. |
 | `WEB_CONTAINER_STORAGE_LIMIT` | Docker writable-layer limit for the web edge when the storage override is used. |
 | `DB_CONTAINER_STORAGE_LIMIT` | Docker writable-layer limit for PostgreSQL when the storage override is used. |
@@ -171,24 +193,14 @@ cd ~/django-ticketing-tool
 ```bash
 curl -fsSLO https://raw.githubusercontent.com/RadekKrizCorner/DjangoTicketingTool/master/docker-compose.release.yml
 curl -fsSLO https://raw.githubusercontent.com/RadekKrizCorner/DjangoTicketingTool/master/docker-compose.release.storage.yml
+curl -fsSLO https://raw.githubusercontent.com/RadekKrizCorner/DjangoTicketingTool/master/.env_template
 ```
 
 3. Create `.env`:
 
 ```bash
-cat > .env <<'EOF'
-APP_IMAGE=ghcr.io/radekkrizcorner/djangoticketingtool/api:latest
-WEB_IMAGE=ghcr.io/radekkrizcorner/djangoticketingtool/web:latest
-PUBLIC_PORT=48137
-DJANGO_SECRET_KEY=replace-with-output-of-openssl-rand-hex-32
-DJANGO_ALLOWED_HOSTS=radekkriz.space,www.radekkriz.space,localhost,127.0.0.1
-DJANGO_CSRF_TRUSTED_ORIGINS=https://radekkriz.space,https://www.radekkriz.space,http://radekkriz.space:48137,http://www.radekkriz.space:48137
-DJANGO_SECURE_SSL_REDIRECT=false
-POSTGRES_DB=app
-POSTGRES_USER=app
-POSTGRES_PASSWORD=replace-with-strong-password
-DEFAULT_FROM_EMAIL=noreply@radekkriz.space
-EOF
+cp .env_template .env
+nano .env
 ```
 
 Generate secrets on the Pi:
@@ -203,6 +215,7 @@ openssl rand -base64 32
 ```bash
 docker compose -f docker-compose.release.yml pull
 docker compose -f docker-compose.release.yml --profile tools run --rm migrate
+docker compose -f docker-compose.release.yml --profile tools run --rm seed-demo
 ```
 
 5. Start the production stack:

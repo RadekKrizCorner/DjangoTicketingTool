@@ -83,6 +83,21 @@ Implemented in PROJECT-006. Members can comment on private projects. Public
 projects can additionally allow all authenticated users through
 `public_comment_policy=authenticated_users`.
 
+## Task Watchers
+
+```text
+POST   /api/v1/projects/{project_id}/tasks/{task_id}/watch/
+DELETE /api/v1/projects/{project_id}/tasks/{task_id}/watch/
+```
+
+Implemented in PROJECT-013. Active project members can watch and unwatch their
+own task subscriptions. Task creators and assignees are subscribed
+automatically, new assignees are subscribed on reassignment, and previous
+assignees remain subscribed until they unwatch. Watchers receive typed
+notifications and email delivery rows for task updates, task transitions, task
+deletion, and comment create/update/delete events. The actor who made the
+change is excluded from watcher notifications.
+
 ## Attachments
 
 ```text

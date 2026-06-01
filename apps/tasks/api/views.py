@@ -21,6 +21,7 @@ from apps.tasks.api.serializers import (
     TaskOutputSerializer,
     TaskTransitionInputSerializer,
     TaskUpdateInputSerializer,
+    TaskWatchStatusSerializer,
     task_service_data,
 )
 
@@ -39,7 +40,7 @@ class TaskListCreateView(APIView):
         tasks = selectors.visible_tasks_for_project(user=request.user, project=project)
         paginator = StandardPageNumberPagination()
         page = paginator.paginate_queryset(tasks, request, view=self)
-        serializer = TaskOutputSerializer(page, many=True)
+        serializer = TaskOutputSerializer(page, many=True, context={"user": request.user})
         return paginator.get_paginated_response(serializer.data)
 
     def post(self, request: Request, project_id: int) -> Response:
@@ -54,7 +55,7 @@ class TaskListCreateView(APIView):
         data["assignee"] = get_active_user_or_400(data["assignee"])
         task = services.create_task(actor=request.user, project=project, data=data)
         return success_response(
-            TaskOutputSerializer(task).data,
+            TaskOutputSerializer(task, context={"user": request.user}).data,
             status_code=status.HTTP_201_CREATED,
         )
 
@@ -67,7 +68,7 @@ class TaskDetailView(APIView):
     def get(self, request: Request, project_id: int, task_id: int) -> Response:
         """Return one visible task."""
         task = get_visible_task(request=request, project_id=project_id, task_id=task_id)
-        return success_response(TaskOutputSerializer(task).data)
+        return success_response(TaskOutputSerializer(task, context={"user": request.user}).data)
 
     def patch(self, request: Request, project_id: int, task_id: int) -> Response:
         """Update a task."""
@@ -78,7 +79,9 @@ class TaskDetailView(APIView):
         if "assignee" in data:
             data["assignee"] = get_active_user_or_400(data["assignee"])
         updated_task = services.update_task(actor=request.user, task=task, data=data)
-        return success_response(TaskOutputSerializer(updated_task).data)
+        return success_response(
+            TaskOutputSerializer(updated_task, context={"user": request.user}).data
+        )
 
     def delete(self, request: Request, project_id: int, task_id: int) -> Response:
         """Soft delete a task."""
@@ -103,7 +106,29 @@ class TaskTransitionView(APIView):
             target_status=serializer.validated_data["status"],
             note=serializer.validated_data.get("note", ""),
         )
-        return success_response(TaskOutputSerializer(updated_task).data)
+        return success_response(
+            TaskOutputSerializer(updated_task, context={"user": request.user}).data
+        )
+
+
+class TaskWatchView(APIView):
+    """Watch and unwatch a task."""
+
+    permission_classes = (IsAuthenticated,)
+
+    def post(self, request: Request, project_id: int, task_id: int) -> Response:
+        """Subscribe the current user to a task."""
+        task = get_visible_task(request=request, project_id=project_id, task_id=task_id)
+        services.watch_task(actor=request.user, task=task)
+        serializer = TaskWatchStatusSerializer({"watched": True})
+        return success_response(serializer.data)
+
+    def delete(self, request: Request, project_id: int, task_id: int) -> Response:
+        """Unsubscribe the current user from a task."""
+        task = get_visible_task(request=request, project_id=project_id, task_id=task_id)
+        services.unwatch_task(actor=request.user, task=task)
+        serializer = TaskWatchStatusSerializer({"watched": False})
+        return success_response(serializer.data)
 
 
 class TaskCommentListCreateView(APIView):
@@ -196,7 +221,7 @@ class MyTasksView(APIView):
         tasks = selectors.assigned_tasks_for_user(user=request.user)
         paginator = StandardPageNumberPagination()
         page = paginator.paginate_queryset(tasks, request, view=self)
-        serializer = TaskOutputSerializer(page, many=True)
+        serializer = TaskOutputSerializer(page, many=True, context={"user": request.user})
         return paginator.get_paginated_response(serializer.data)
 
 
@@ -210,7 +235,7 @@ class DueSoonTasksView(APIView):
         tasks = selectors.due_soon_tasks_for_user(user=request.user)
         paginator = StandardPageNumberPagination()
         page = paginator.paginate_queryset(tasks, request, view=self)
-        serializer = TaskOutputSerializer(page, many=True)
+        serializer = TaskOutputSerializer(page, many=True, context={"user": request.user})
         return paginator.get_paginated_response(serializer.data)
 
 
