@@ -51,6 +51,9 @@ data, and future SSO identity mapping.
 - Password reset is handled through email.
 - Local email delivery uses Mailpit during development.
 - Production email delivery is configured through SMTP environment variables.
+- Personal access tokens are supported for Postman, Python scripts, and other
+  non-browser clients. Raw tokens are shown only once and stored server-side as
+  hashes.
 
 ### Justification
 
@@ -64,6 +67,28 @@ before it is needed.
 - Django default `username`: faster to start, but weaker for email-first and SSO-ready APIs.
 - `django-allauth` now: useful for social login, but too much scope for version 1.
 - Email verification before activation: stronger for public production, but not required here.
+
+### Personal Access Tokens
+
+Endpoints:
+
+```text
+GET    /api/v1/users/personal-tokens/
+POST   /api/v1/users/personal-tokens/
+DELETE /api/v1/users/personal-tokens/{token_id}/
+```
+
+Rules:
+
+- Tokens use `Authorization: Bearer rkriz_pat_<secret>`.
+- Tokens belong to exactly one active user.
+- Only a hash is stored in the database.
+- The raw token is returned only from the creation response.
+- Users can list and revoke only their own tokens.
+- `full_access` allows normal API usage.
+- `read_only` allows only `GET`, `HEAD`, and `OPTIONS`.
+- Expired and revoked tokens return `401`.
+- Scope violations return `403`.
 
 ## Project Visibility
 

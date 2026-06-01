@@ -11,6 +11,9 @@ POST /api/v1/users/logout/
 GET  /api/v1/users/me/
 GET  /api/v1/users/profile/
 PATCH /api/v1/users/profile/
+GET  /api/v1/users/personal-tokens/
+POST /api/v1/users/personal-tokens/
+DELETE /api/v1/users/personal-tokens/{token_id}/
 POST /api/v1/users/password/
 POST /api/v1/users/password-reset/request/
 POST /api/v1/users/password-reset/confirm/
@@ -24,6 +27,24 @@ id
 email
 display_name
 ```
+
+Implemented in PROJECT-018. Personal access tokens are intended for Postman,
+Python scripts, and other non-browser clients. The raw token is returned only
+from the create endpoint and is stored server-side as a SHA-256 hash. Tokens use
+the same bearer header as JWT:
+
+```text
+Authorization: Bearer rkriz_pat_<secret>
+```
+
+Supported scopes:
+
+```text
+full_access
+read_only
+```
+
+`read_only` tokens can call only `GET`, `HEAD`, and `OPTIONS` endpoints.
 
 ## Projects
 

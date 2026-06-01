@@ -1,6 +1,8 @@
 """Account business services."""
 
+import hashlib
 import logging
+import secrets
 from binascii import Error as BinasciiError
 from http import HTTPStatus
 
@@ -9,18 +11,21 @@ from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.core.mail import send_mail
 from django.db import IntegrityError, OperationalError, ProgrammingError, transaction
+from django.utils import timezone
 from django.utils.encoding import DjangoUnicodeDecodeError, force_str
 from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.token_blacklist.models import BlacklistedToken, OutstandingToken
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from apps.accounts.models import UserProfile
+from apps.accounts.models import PersonalAccessToken, UserProfile
 from apps.accounts.policies import can_use_local_password_reset
 from apps.accounts.tokens import password_reset_token_generator
 from apps.common.errors import DomainError
 
 logger = logging.getLogger(__name__)
+PERSONAL_ACCESS_TOKEN_PREFIX = "rkriz_pat_"
+PERSONAL_ACCESS_TOKEN_PREFIX_LENGTH = 20
 
 
 def register_user(*, email: str, password: str, display_name: str):
@@ -169,6 +174,71 @@ def blacklist_outstanding_tokens_for_user(user) -> None:
             BlacklistedToken.objects.get_or_create(token=outstanding_token)
     except (OperationalError, ProgrammingError):
         return
+
+
+def create_personal_access_token(
+    *,
+    user,
+    name: str,
+    scopes: list[str],
+    expires_at=None,
+) -> tuple[PersonalAccessToken, str]:
+    """Create a personal access token and return it with the raw token once."""
+    raw_token = generate_personal_access_token()
+    token = PersonalAccessToken.objects.create(
+        user=user,
+        name=name.strip(),
+        token_prefix=raw_token[:PERSONAL_ACCESS_TOKEN_PREFIX_LENGTH],
+        token_hash=hash_personal_access_token(raw_token),
+        scopes=scopes,
+        expires_at=expires_at,
+    )
+    return token, raw_token
+
+
+def generate_personal_access_token() -> str:
+    """Return a new raw personal access token."""
+    return f"{PERSONAL_ACCESS_TOKEN_PREFIX}{secrets.token_urlsafe(32)}"
+
+
+def hash_personal_access_token(raw_token: str) -> str:
+    """Return the stable hash for a raw personal access token."""
+    return hashlib.sha256(raw_token.encode("utf-8")).hexdigest()
+
+
+def authenticate_personal_access_token(*, raw_token: str) -> PersonalAccessToken | None:
+    """Return a usable personal access token matching the raw token."""
+    token = (
+        PersonalAccessToken.objects.select_related("user")
+        .filter(
+            token_prefix=raw_token[:PERSONAL_ACCESS_TOKEN_PREFIX_LENGTH],
+            token_hash=hash_personal_access_token(raw_token),
+        )
+        .first()
+    )
+    if token is None or not token.is_usable():
+        return None
+    return token
+
+
+def mark_personal_access_token_used(*, token: PersonalAccessToken) -> None:
+    """Record the last time a personal access token was used."""
+    PersonalAccessToken.objects.filter(pk=token.pk).update(last_used_at=timezone.now())
+
+
+def revoke_personal_access_token(*, user, token_id: int) -> PersonalAccessToken:
+    """Revoke a personal access token owned by a user."""
+    token = PersonalAccessToken.objects.filter(user=user, pk=token_id).first()
+    if token is None:
+        raise DomainError(
+            code="not_found",
+            detail="Personal access token was not found.",
+            status_code=HTTPStatus.NOT_FOUND,
+        )
+    if token.revoked_at is None:
+        token.revoked_at = timezone.now()
+        token.save(update_fields=["revoked_at", "updated_at"])
+    return token
 
 
 def raise_password_reset_invalid() -> None:

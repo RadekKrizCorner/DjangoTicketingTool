@@ -16,6 +16,10 @@ from apps.accounts.api.serializers import (
     PasswordChangeInputSerializer,
     PasswordResetConfirmInputSerializer,
     PasswordResetRequestInputSerializer,
+    PersonalAccessTokenCreateEnvelopeSerializer,
+    PersonalAccessTokenCreateInputSerializer,
+    PersonalAccessTokenListEnvelopeSerializer,
+    PersonalAccessTokenOutputSerializer,
     ProfileEnvelopeSerializer,
     ProfileOutputSerializer,
     ProfileUpdateInputSerializer,
@@ -211,6 +215,51 @@ class PasswordResetConfirmView(APIView):
         serializer.is_valid(raise_exception=True)
         services.confirm_password_reset(**serializer.validated_data)
         return success_response({"status": "password_reset"})
+
+
+class PersonalAccessTokenListCreateView(APIView):
+    """List and create personal access tokens."""
+
+    permission_classes = (IsAuthenticated,)
+
+    @extend_schema(responses={200: PersonalAccessTokenListEnvelopeSerializer})
+    def get(self, request: Request) -> Response:
+        """Return personal access tokens owned by the authenticated user."""
+        tokens = selectors.personal_access_tokens_for_user(user=request.user)
+        return success_response(PersonalAccessTokenOutputSerializer(tokens, many=True).data)
+
+    @extend_schema(
+        request=PersonalAccessTokenCreateInputSerializer,
+        responses={201: PersonalAccessTokenCreateEnvelopeSerializer},
+    )
+    def post(self, request: Request) -> Response:
+        """Create a personal access token and return the raw token once."""
+        serializer = PersonalAccessTokenCreateInputSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        token, raw_token = services.create_personal_access_token(
+            user=request.user,
+            name=serializer.validated_data["name"],
+            scopes=serializer.validated_data["scopes"],
+            expires_at=serializer.validated_data["expires_at"],
+        )
+        response_data = PersonalAccessTokenOutputSerializer(token).data
+        response_data["token"] = raw_token
+        return success_response(
+            response_data,
+            status_code=status.HTTP_201_CREATED,
+        )
+
+
+class PersonalAccessTokenDetailView(APIView):
+    """Revoke personal access tokens."""
+
+    permission_classes = (IsAuthenticated,)
+
+    @extend_schema(responses={204: None})
+    def delete(self, request: Request, token_id: int) -> Response:
+        """Revoke a personal access token owned by the authenticated user."""
+        services.revoke_personal_access_token(user=request.user, token_id=token_id)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class UserSearchView(APIView):

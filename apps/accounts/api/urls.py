@@ -9,6 +9,8 @@ from apps.accounts.api.views import (
     PasswordChangeView,
     PasswordResetConfirmView,
     PasswordResetRequestView,
+    PersonalAccessTokenDetailView,
+    PersonalAccessTokenListCreateView,
     ProfileView,
     RegisterView,
     UserSearchView,
@@ -25,6 +27,16 @@ urlpatterns: list[URLPattern] = [
     path("logout/", LogoutView.as_view(), name="user-logout"),
     path("me/", MeView.as_view(), name="user-me"),
     path("profile/", ProfileView.as_view(), name="user-profile"),
+    path(
+        "personal-tokens/",
+        PersonalAccessTokenListCreateView.as_view(),
+        name="personal-token-list",
+    ),
+    path(
+        "personal-tokens/<int:token_id>/",
+        PersonalAccessTokenDetailView.as_view(),
+        name="personal-token-detail",
+    ),
     path("password/", PasswordChangeView.as_view(), name="user-password-change"),
     path(
         "password-reset/request/",
