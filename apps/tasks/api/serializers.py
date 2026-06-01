@@ -2,6 +2,7 @@
 
 from rest_framework import serializers
 
+from apps.tasks import selectors
 from apps.tasks.models import Task
 
 
@@ -24,6 +25,14 @@ class TaskOutputSerializer(serializers.Serializer):
     due_at = serializers.DateTimeField(allow_null=True)
     created_at = serializers.DateTimeField()
     updated_at = serializers.DateTimeField()
+    watched = serializers.SerializerMethodField()
+
+    def get_watched(self, obj: Task) -> bool:
+        """Return whether the context user watches the task."""
+        user = self.context.get("user")
+        if user is None:
+            return False
+        return selectors.task_is_watched_by_user(task=obj, user=user)
 
 
 class TaskEnvelopeSerializer(serializers.Serializer):
@@ -98,6 +107,12 @@ class TaskCommentInputSerializer(serializers.Serializer):
     """Validate task comment input."""
 
     body = serializers.CharField()
+
+
+class TaskWatchStatusSerializer(serializers.Serializer):
+    """Serialize task watcher state."""
+
+    watched = serializers.BooleanField()
 
 
 def task_service_data(validated_data: dict) -> dict:

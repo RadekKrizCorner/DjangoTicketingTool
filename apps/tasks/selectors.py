@@ -9,7 +9,7 @@ from django.utils import timezone
 from apps.common.errors import DomainError
 from apps.projects import selectors as project_selectors
 from apps.projects.models import Project
-from apps.tasks.models import Task, TaskComment
+from apps.tasks.models import Task, TaskComment, TaskWatcher
 from apps.tasks.policies import can_read_task
 
 
@@ -52,6 +52,27 @@ def comment_for_task_or_404(*, task: Task, comment_id: int) -> TaskComment:
     if comment is None:
         raise_not_found()
     return comment
+
+
+def active_watchers_for_task(*, task: Task) -> QuerySet[TaskWatcher]:
+    """Return active watchers who still belong to the task project."""
+    return (
+        TaskWatcher.objects.filter(
+            task=task,
+            deleted_at__isnull=True,
+            user__project_memberships__project=task.project,
+            user__project_memberships__deleted_at__isnull=True,
+        )
+        .select_related("user", "task", "task__project")
+        .order_by("user_id", "id")
+    )
+
+
+def task_is_watched_by_user(*, task: Task, user: Any) -> bool:
+    """Return whether a user actively watches a task."""
+    if not getattr(user, "is_authenticated", False):
+        return False
+    return active_watchers_for_task(task=task).filter(user=user).exists()
 
 
 def assigned_tasks_for_user(*, user: Any) -> QuerySet[Task]:
