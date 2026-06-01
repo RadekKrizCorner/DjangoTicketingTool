@@ -3,6 +3,7 @@
 from http import HTTPStatus
 
 from django.contrib.auth import get_user_model
+from drf_spectacular.utils import extend_schema
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
@@ -14,11 +15,13 @@ from apps.api.responses import success_response
 from apps.common.errors import DomainError
 from apps.projects import selectors as project_selectors
 from apps.tasks import selectors, services
+from apps.tasks.api import filters as task_filters
 from apps.tasks.api.serializers import (
     TaskCommentInputSerializer,
     TaskCommentOutputSerializer,
     TaskCreateInputSerializer,
     TaskOutputSerializer,
+    TaskPaginatedEnvelopeSerializer,
     TaskTransitionInputSerializer,
     TaskUpdateInputSerializer,
     TaskWatchStatusSerializer,
@@ -31,13 +34,20 @@ class TaskListCreateView(APIView):
 
     permission_classes = (IsAuthenticated,)
 
+    @extend_schema(
+        parameters=task_filters.TASK_FILTER_PARAMETERS,
+        responses={200: TaskPaginatedEnvelopeSerializer},
+    )
     def get(self, request: Request, project_id: int) -> Response:
         """Return visible tasks for a project."""
         project = project_selectors.project_for_user_or_404(
             user=request.user,
             project_id=project_id,
         )
-        tasks = selectors.visible_tasks_for_project(user=request.user, project=project)
+        tasks = task_filters.filtered_task_queryset(
+            request=request,
+            queryset=selectors.visible_tasks_for_project(user=request.user, project=project),
+        )
         paginator = StandardPageNumberPagination()
         page = paginator.paginate_queryset(tasks, request, view=self)
         serializer = TaskOutputSerializer(page, many=True, context={"user": request.user})
@@ -216,9 +226,16 @@ class MyTasksView(APIView):
 
     permission_classes = (IsAuthenticated,)
 
+    @extend_schema(
+        parameters=task_filters.TASK_FILTER_PARAMETERS,
+        responses={200: TaskPaginatedEnvelopeSerializer},
+    )
     def get(self, request: Request) -> Response:
         """Return tasks assigned to the current user."""
-        tasks = selectors.assigned_tasks_for_user(user=request.user)
+        tasks = task_filters.filtered_task_queryset(
+            request=request,
+            queryset=selectors.assigned_tasks_for_user(user=request.user),
+        )
         paginator = StandardPageNumberPagination()
         page = paginator.paginate_queryset(tasks, request, view=self)
         serializer = TaskOutputSerializer(page, many=True, context={"user": request.user})
@@ -230,9 +247,16 @@ class DueSoonTasksView(APIView):
 
     permission_classes = (IsAuthenticated,)
 
+    @extend_schema(
+        parameters=task_filters.TASK_FILTER_PARAMETERS,
+        responses={200: TaskPaginatedEnvelopeSerializer},
+    )
     def get(self, request: Request) -> Response:
         """Return tasks due in the next day."""
-        tasks = selectors.due_soon_tasks_for_user(user=request.user)
+        tasks = task_filters.filtered_task_queryset(
+            request=request,
+            queryset=selectors.due_soon_tasks_for_user(user=request.user),
+        )
         paginator = StandardPageNumberPagination()
         page = paginator.paginate_queryset(tasks, request, view=self)
         serializer = TaskOutputSerializer(page, many=True, context={"user": request.user})

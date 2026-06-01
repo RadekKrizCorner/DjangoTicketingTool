@@ -59,6 +59,13 @@ class Project(AuditSoftDeleteModel):
         """Configure project ordering."""
 
         ordering = ["-created_at", "-id"]
+        indexes = [
+            models.Index(
+                fields=["visibility", "state", "-created_at"],
+                name="project_vis_state_created_idx",
+            ),
+            models.Index(fields=["owner", "-created_at"], name="project_owner_created_idx"),
+        ]
 
     def __str__(self) -> str:
         """Return the project name."""

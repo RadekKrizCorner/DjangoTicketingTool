@@ -14,6 +14,7 @@ from apps.api.pagination import StandardPageNumberPagination
 from apps.api.responses import success_response
 from apps.common.errors import DomainError
 from apps.projects import selectors, services
+from apps.projects.api import filters as project_filters
 from apps.projects.api.serializers import (
     AuditLogOutputSerializer,
     AuditLogPaginatedEnvelopeSerializer,
@@ -40,16 +41,14 @@ class ProjectListCreateView(APIView):
 
     @extend_schema(
         operation_id="projects_list",
+        parameters=project_filters.PROJECT_FILTER_PARAMETERS,
         responses={200: ProjectPaginatedEnvelopeSerializer},
     )
     def get(self, request: Request) -> Response:
         """Return projects visible to the authenticated user."""
-        projects = selectors.filter_visible_projects(
-            user=request.user,
-            visibility=request.query_params.get("visibility"),
-            role=request.query_params.get("role"),
-            search=request.query_params.get("search"),
-            ordering=request.query_params.get("ordering"),
+        projects = project_filters.filtered_project_queryset(
+            request=request,
+            queryset=selectors.visible_projects_for_user(request.user),
         )
         paginator = StandardPageNumberPagination()
         page = paginator.paginate_queryset(projects, request, view=self)

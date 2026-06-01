@@ -51,6 +51,20 @@ class Task(AuditSoftDeleteModel):
         """Configure task ordering."""
 
         ordering = ["-created_at", "-id"]
+        indexes = [
+            models.Index(
+                fields=["project", "status", "due_at"],
+                name="tasks_project_status_due_idx",
+            ),
+            models.Index(
+                fields=["project", "assignee", "due_at"],
+                name="tasks_project_assignee_due_idx",
+            ),
+            models.Index(
+                fields=["project", "priority", "-created_at"],
+                name="tasks_project_priority_idx",
+            ),
+        ]
 
     def __str__(self) -> str:
         """Return the task title."""

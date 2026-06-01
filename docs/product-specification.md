@@ -462,6 +462,52 @@ GET /api/v1/notifications/?is_read=false
 
 Only whitelisted fields can be used for filtering and ordering.
 
+Advanced project filters:
+
+```text
+visibility
+state
+role
+owner_id
+search
+q
+created_after
+created_before
+updated_after
+updated_before
+ordering
+```
+
+`search` and `q` are aliases. Both apply the same case-insensitive text search
+over project `name` and `description`. `search` is the explicit documented name;
+`q` is a short client-friendly alias for tools such as Postman, browser query
+strings, and compact mobile requests. If both are provided, both filters are
+applied, so clients should send only one of them.
+
+Advanced task filters:
+
+```text
+status
+priority
+assignee_id
+search
+q
+due_after
+due_before
+created_after
+created_before
+updated_after
+updated_before
+ordering
+```
+
+For tasks, `search` and `q` are also aliases. Both apply the same
+case-insensitive text search over task `title` and `description`.
+
+Invalid filter values, invalid date values, unknown filter fields, and unsupported
+ordering fields return `400`. Filtering must run after access scoping so private
+data cannot be discovered through search or filter combinations.
+
 ## Database
 
 PostgreSQL is the only officially supported database; code is ORM-only but
@@ -507,20 +553,8 @@ Docker and Kubernetes health checks use:
 
 Each milestone must be a single commit with a Jira-style message.
 
-Planned structure:
-
-```text
-RKRIZ-001 Add product specification documentation
-RKRIZ-002 Bootstrap dockerized Django project
-RKRIZ-003 Add JWT user management and password reset
-RKRIZ-004 Add project membership permissions
-RKRIZ-005 Add task workflow, comments, and attachments
-RKRIZ-006 Add Celery scheduled project jobs
-RKRIZ-007 Add notifications, email delivery, and audit log
-RKRIZ-008 Add unit, integration, and e2e test coverage
-RKRIZ-009 Add GHCR image publishing workflow
-RKRIZ-010 Add Kubernetes and deployment docs
-```
-
-The exact implementation plan will be generated after this product specification is
-reviewed and approved.
+This section intentionally defines the commit policy, not a manually maintained
+list of completed milestones. The authoritative milestone history is the Git log
+and merge requests targeting the `release` branch. Commit messages must contain a
+ticket token such as `PROJECT-019 Add advanced search and filtering` or
+`HOTFIX-login-token-expiry`.
