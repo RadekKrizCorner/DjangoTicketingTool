@@ -91,6 +91,25 @@ docker compose run --rm api python manage.py migrate
 docker compose run --rm api pytest -m "unit or integration" -q
 ```
 
+Create a deterministic demo dataset:
+
+```bash
+docker compose run --rm api python manage.py seed_demo_data
+```
+
+The seed command creates or updates this predefined superuser:
+
+```text
+email: demo.admin@example.com
+password: DemoAdmin123!
+display name: Demo Admin
+```
+
+It also creates demo users, projects, memberships, tasks, comments, text
+attachments, and notifications. Override the credentials with
+`DEMO_SUPERUSER_EMAIL`, `DEMO_SUPERUSER_PASSWORD`,
+`DEMO_SUPERUSER_DISPLAY_NAME`, and `DEMO_USER_PASSWORD`.
+
 ## Documentation
 
 Run only the MkDocs documentation site:
@@ -137,6 +156,8 @@ The repository includes release-oriented Docker and Kubernetes artifacts:
 
 - GHCR publishing for the API and web runtime images.
 - Release Compose file for running published images.
+- `.env_template` for release Compose configuration.
+- `seed-demo` release Compose tool service for optional demo data.
 - Optional storage quota override for Linux hosts that support writable-layer quotas.
 - Kubernetes manifests for API, Celery worker, Celery beat, migrations, service,
   ingress, and media storage.
