@@ -258,6 +258,7 @@ Uses:
 
 - Project published notification and email to members.
 - Task deadline reminder notification and email to assignee.
+- Task watcher notifications and email delivery for task and comment changes.
 - Password reset email.
 
 `EmailDelivery` acts as an outbox for audit and deduplication.

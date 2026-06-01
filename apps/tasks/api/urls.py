@@ -9,6 +9,7 @@ from apps.tasks.api.views import (
     TaskDetailView,
     TaskListCreateView,
     TaskTransitionView,
+    TaskWatchView,
 )
 
 urlpatterns: list[URLPattern] = [
@@ -18,6 +19,11 @@ urlpatterns: list[URLPattern] = [
         "<int:task_id>/transition/",
         TaskTransitionView.as_view(),
         name="project-task-transition",
+    ),
+    path(
+        "<int:task_id>/watch/",
+        TaskWatchView.as_view(),
+        name="project-task-watch",
     ),
     path(
         "<int:task_id>/comments/",
