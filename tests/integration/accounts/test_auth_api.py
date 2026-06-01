@@ -198,6 +198,8 @@ def test_public_user_endpoints_do_not_require_authentication(
     dict(method="get", path="/api/v1/users/profile/", payload=None),
     dict(method="patch", path="/api/v1/users/profile/", payload={"timezone": "Europe/Prague"}),
     dict(method="get", path="/api/v1/users/search/", payload=None),
+    dict(method="get", path="/api/v1/users/personal-tokens/", payload=None),
+    dict(method="post", path="/api/v1/users/personal-tokens/", payload={}),
     dict(method="post", path="/api/v1/users/password/", payload={}),
     dict(method="post", path="/api/v1/users/logout/", payload={}),
 )

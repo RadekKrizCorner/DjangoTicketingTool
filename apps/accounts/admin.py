@@ -3,7 +3,7 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as DjangoUserAdmin
 
-from apps.accounts.models import ExternalIdentity, User, UserProfile
+from apps.accounts.models import ExternalIdentity, PersonalAccessToken, User, UserProfile
 
 
 @admin.register(User)
@@ -57,3 +57,19 @@ class ExternalIdentityAdmin(admin.ModelAdmin):
     list_display = ("provider", "provider_subject", "user", "email_at_link_time")
     list_filter = ("provider",)
     search_fields = ("provider", "provider_subject", "email_at_link_time", "user__email")
+
+
+@admin.register(PersonalAccessToken)
+class PersonalAccessTokenAdmin(admin.ModelAdmin):
+    """Admin configuration for personal access tokens."""
+
+    list_display = ("name", "user", "token_prefix", "expires_at", "revoked_at", "last_used_at")
+    list_filter = ("revoked_at", "expires_at", "created_at")
+    readonly_fields = (
+        "token_prefix",
+        "token_hash",
+        "created_at",
+        "updated_at",
+        "last_used_at",
+    )
+    search_fields = ("name", "user__email", "token_prefix")

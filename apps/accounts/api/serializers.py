@@ -6,6 +6,8 @@ from django.contrib.auth import get_user_model
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
+from apps.accounts.models import PersonalAccessToken
+
 
 def normalize_email_input(email: str) -> str:
     """Normalize an email value received by the API layer."""
@@ -48,6 +50,83 @@ class UserSearchPaginatedEnvelopeSerializer(serializers.Serializer):
 
     data = UserOutputSerializer(many=True)
     meta = PaginationMetaSerializer()
+
+
+class PersonalAccessTokenOutputSerializer(serializers.Serializer):
+    """Serialize personal access token metadata."""
+
+    id = serializers.IntegerField()
+    name = serializers.CharField()
+    token_prefix = serializers.CharField()
+    scopes = serializers.ListField(child=serializers.CharField())
+    expires_at = serializers.DateTimeField(allow_null=True)
+    revoked_at = serializers.DateTimeField(allow_null=True)
+    last_used_at = serializers.DateTimeField(allow_null=True)
+    created_at = serializers.DateTimeField()
+
+
+class PersonalAccessTokenCreateInputSerializer(serializers.Serializer):
+    """Validate personal access token creation input."""
+
+    name = serializers.CharField(max_length=100)
+    scopes = serializers.ListField(
+        child=serializers.ChoiceField(
+            choices=[
+                PersonalAccessToken.SCOPE_FULL_ACCESS,
+                PersonalAccessToken.SCOPE_READ_ONLY,
+            ]
+        ),
+        required=False,
+        allow_empty=False,
+    )
+    expires_at = serializers.DateTimeField(required=False, allow_null=True)
+
+    def validate_name(self, value: str) -> str:
+        """Validate and normalize a token name."""
+        normalized_name = value.strip()
+        if not normalized_name:
+            raise serializers.ValidationError("Token name cannot be blank.")
+        return normalized_name
+
+    def validate_scopes(self, value: list[str]) -> list[str]:
+        """Validate personal access token scopes."""
+        deduped_scopes = list(dict.fromkeys(value))
+        if (
+            PersonalAccessToken.SCOPE_FULL_ACCESS in deduped_scopes
+            and PersonalAccessToken.SCOPE_READ_ONLY in deduped_scopes
+        ):
+            raise serializers.ValidationError("Choose either full_access or read_only.")
+        return deduped_scopes
+
+    def validate(self, attrs: dict) -> dict:
+        """Apply default personal access token scopes."""
+        attrs.setdefault("scopes", [PersonalAccessToken.SCOPE_FULL_ACCESS])
+        attrs.setdefault("expires_at", None)
+        return attrs
+
+
+class PersonalAccessTokenCreateOutputSerializer(PersonalAccessTokenOutputSerializer):
+    """Serialize created personal access token metadata and raw token."""
+
+    token = serializers.CharField()
+
+
+class PersonalAccessTokenEnvelopeSerializer(serializers.Serializer):
+    """Serialize one personal access token data envelope."""
+
+    data = PersonalAccessTokenOutputSerializer()
+
+
+class PersonalAccessTokenCreateEnvelopeSerializer(serializers.Serializer):
+    """Serialize a created personal access token data envelope."""
+
+    data = PersonalAccessTokenCreateOutputSerializer()
+
+
+class PersonalAccessTokenListEnvelopeSerializer(serializers.Serializer):
+    """Serialize a personal access token list data envelope."""
+
+    data = PersonalAccessTokenOutputSerializer(many=True)
 
 
 class RegisterInputSerializer(serializers.Serializer):

@@ -2,7 +2,8 @@
 
 ## Authentication
 
-Use JWT access and refresh tokens.
+Use JWT access and refresh tokens for interactive clients. Use personal access
+tokens for Postman, Python scripts, and other automation clients.
 
 Access tokens are sent as:
 
@@ -12,6 +13,17 @@ Authorization: Bearer <token>
 
 Refresh rotation and blacklist are required so logout and password reset can revoke
 existing refresh tokens.
+
+Personal access tokens:
+
+- are created by authenticated users under `/api/v1/users/personal-tokens/`;
+- use the `rkriz_pat_` prefix;
+- are stored only as SHA-256 hashes;
+- show the raw token only once at creation time;
+- can be revoked without deleting audit-relevant metadata;
+- support `full_access` and `read_only` scopes.
+
+`read_only` personal access tokens can call only `GET`, `HEAD`, and `OPTIONS`.
 
 ## Password Reset
 
