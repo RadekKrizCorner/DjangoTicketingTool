@@ -21,6 +21,13 @@
         <div class="nav-links">
           <a href="/api/v1/docs/">API</a>
           <a href="/docs/">Docs</a>
+          {% if links %}
+            {% for link in links %}
+              {% if link.kind == "monitoring" %}
+                <a href="{{ link.href }}" target="_blank" rel="noreferrer">Monitoring</a>
+              {% endif %}
+            {% endfor %}
+          {% endif %}
           <a href="/admin/">Admin</a>
         </div>
       </nav>
@@ -41,6 +48,16 @@
               rel="noreferrer"
               target="_blank"
             >GitHub</a>
+            {% for link in links %}
+              {% if link.kind == "monitoring" %}
+                <a
+                  class="button button-secondary"
+                  href="{{ link.href }}"
+                  rel="noreferrer"
+                  target="_blank"
+                >Monitoring</a>
+              {% endif %}
+            {% endfor %}
           </div>
         </div>
 

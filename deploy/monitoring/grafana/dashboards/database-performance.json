@@ -1,0 +1,66 @@
+{
+  "uid": "django-ticketing-database-performance",
+  "title": "Database Performance",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "tags": ["django-ticketing-tool", "database"],
+  "timezone": "browser",
+  "panels": [
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "PostgreSQL exporter up",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 7, "w": 6, "x": 0, "y": 0},
+      "targets": [
+        {"expr": "min(up{job=\"postgres\"})", "legendFormat": "up", "refId": "A"}
+      ]
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Open DB connections",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 7, "w": 6, "x": 6, "y": 0},
+      "targets": [
+        {"expr": "sum(pg_stat_database_numbackends)", "legendFormat": "connections", "refId": "A"}
+      ]
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "ORM query rate",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 9, "w": 12, "x": 12, "y": 0},
+      "targets": [
+        {"expr": "sum(rate(django_db_queries_total[5m])) by (operation)", "legendFormat": "{{operation}}", "refId": "A"}
+      ]
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "ORM query p95 by operation",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 9, "w": 12, "x": 0, "y": 7},
+      "targets": [
+        {"expr": "histogram_quantile(0.95, sum(rate(django_db_query_duration_seconds_bucket[5m])) by (le, operation))", "legendFormat": "{{operation}}", "refId": "A"}
+      ],
+      "fieldConfig": {"defaults": {"unit": "s"}}
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "Slow query rate by route",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 9, "w": 12, "x": 12, "y": 9},
+      "targets": [
+        {"expr": "sum(rate(django_db_slow_queries_total[5m])) by (route)", "legendFormat": "{{route}}", "refId": "A"}
+      ]
+    }
+  ]
+}

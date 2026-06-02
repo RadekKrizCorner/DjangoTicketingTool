@@ -13,6 +13,7 @@ from django.utils import timezone
 from apps.attachments.models import Attachment
 from apps.attachments.selectors import project_attachment_filter, project_for_attachment
 from apps.common.errors import DomainError
+from apps.observability.metrics import record_attachment_upload_rejection
 from apps.projects import selectors as project_selectors
 from apps.projects.models import Project
 from apps.tasks import policies as task_policies
@@ -82,6 +83,7 @@ def ensure_upload_allowed(*, actor: Any, parent: Task | TaskComment, project: Pr
 def validate_uploaded_file(*, uploaded_file, project: Project) -> None:
     """Validate attachment size, content type, extension, and quotas."""
     if uploaded_file.size > settings.ATTACHMENT_MAX_FILE_SIZE_BYTES:
+        record_attachment_upload_rejection(reason="file_too_large")
         raise DomainError(
             code="attachment_too_large",
             detail="Attachment exceeds the per-file size limit.",
@@ -92,17 +94,20 @@ def validate_uploaded_file(*, uploaded_file, project: Project) -> None:
     if content_type not in ALLOWED_CONTENT_TYPES or (
         content_type == "text/plain" and suffix not in TEXT_EXTENSIONS
     ):
+        record_attachment_upload_rejection(reason="type_not_allowed")
         raise DomainError(
             code="attachment_type_not_allowed",
             detail="Attachment file type is not allowed.",
             status_code=HTTPStatus.BAD_REQUEST,
         )
     if total_attachment_bytes() + uploaded_file.size > settings.ATTACHMENT_MAX_TOTAL_BYTES:
+        record_attachment_upload_rejection(reason="global_quota_exceeded")
         raise_quota_exceeded("Global attachment quota would be exceeded.")
     if (
         project_attachment_bytes(project=project) + uploaded_file.size
         > settings.ATTACHMENT_MAX_PROJECT_BYTES
     ):
+        record_attachment_upload_rejection(reason="project_quota_exceeded")
         raise_quota_exceeded("Project attachment quota would be exceeded.")
 
 

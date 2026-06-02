@@ -58,6 +58,18 @@ def home_page(request: HttpRequest) -> HttpResponse:
             "external": False,
         },
     ]
+    if settings.PUBLIC_GRAFANA_URL:
+        links.append(
+            {
+                "label": "Grafana Monitoring",
+                "href": settings.PUBLIC_GRAFANA_URL,
+                "description": (
+                    "Protected dashboards for API, database, async jobs, and host health."
+                ),
+                "kind": "monitoring",
+                "external": True,
+            }
+        )
     return render(request, "common/home.html", {"links": links})
 
 

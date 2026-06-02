@@ -24,12 +24,22 @@ def env_template_names() -> set[str]:
 @pytest.mark.kwparametrize(
     {"compose_file": "docker-compose.release.yml"},
     {"compose_file": "docker-compose.release.storage.yml"},
+    {"compose_file": "docker-compose.release.monitoring.yml"},
 )
 def test_env_template_covers_release_compose_variables(compose_file):
     """Verify the env template documents every release Compose variable."""
     compose_names = compose_environment_names(REPO_ROOT / compose_file)
 
     assert compose_names <= env_template_names()
+
+
+def test_release_gateway_blocks_internal_metrics_endpoint():
+    """Verify public release traffic cannot reach the internal metrics endpoint."""
+    nginx_config = (REPO_ROOT / "deploy/release/nginx.conf").read_text()
+
+    assert "location = /internal/metrics" in nginx_config
+    assert "location ^~ /internal/" in nginx_config
+    assert "return 404;" in nginx_config
 
 
 @pytest.mark.kwparametrize(

@@ -118,6 +118,41 @@ The storage override is separate because Docker Desktop, Rancher Desktop, and
 some VPS storage drivers reject `storage_opt.size`. Application quotas remain
 enabled in both modes and are the primary attachment protection.
 
+Enable production monitoring with the monitoring overlay:
+
+```bash
+docker compose \
+  -f docker-compose.release.yml \
+  -f docker-compose.release.monitoring.yml \
+  --profile monitoring \
+  up -d web api celery-worker celery-beat prometheus grafana postgres-exporter redis-exporter celery-exporter node-exporter cadvisor
+```
+
+Grafana binds to `127.0.0.1:${GRAFANA_LOCAL_PORT:-3000}` for local admin access.
+Prometheus and all exporters stay internal to the Compose network.
+
+To publish Grafana through Cloudflare Access, configure
+`grafana.radekkriz.space` in Cloudflare Zero Trust, set `CLOUDFLARED_TOKEN`, and
+start the Cloudflare profile as well:
+
+```bash
+docker compose \
+  -f docker-compose.release.yml \
+  -f docker-compose.release.monitoring.yml \
+  --profile monitoring \
+  --profile cloudflare \
+  up -d grafana prometheus cloudflared
+```
+
+The tunnel should route `grafana.radekkriz.space` to:
+
+```text
+http://grafana:3000
+```
+
+The public homepage shows the Monitoring link when `PUBLIC_GRAFANA_URL` is set.
+Use `https://grafana.radekkriz.space` for the public demo.
+
 For direct HTTP on port `48137`, keep `DJANGO_SECURE_SSL_REDIRECT=false`. If
 `radekkriz.space` or `www.radekkriz.space` is terminated through HTTPS before this Compose stack, set
 `DJANGO_SECURE_SSL_REDIRECT=true` and keep
@@ -138,6 +173,17 @@ Use these variables to adapt the stack:
 | `EMAIL_HOST`, `EMAIL_PORT`, `DEFAULT_FROM_EMAIL` | SMTP delivery settings. |
 | `DEMO_SUPERUSER_EMAIL`, `DEMO_SUPERUSER_PASSWORD`, `DEMO_SUPERUSER_DISPLAY_NAME` | Demo superuser credentials used by `seed_demo_data`. |
 | `DEMO_USER_PASSWORD` | Password assigned to generated non-staff demo users. |
+| `PUBLIC_GRAFANA_URL` | Public Cloudflare Access protected Grafana URL shown on the homepage. |
+| `OBSERVABILITY_METRICS_ENABLED` | Enables the internal Django Prometheus endpoint. |
+| `OBSERVABILITY_SLOW_QUERY_SECONDS` | ORM query duration threshold for slow-query counters. |
+| `PROMETHEUS_RETENTION_TIME` | Prometheus retention by time, default `7d`. |
+| `PROMETHEUS_RETENTION_SIZE` | Prometheus retention by size, default `512MB`. |
+| `GRAFANA_ADMIN_USER`, `GRAFANA_ADMIN_PASSWORD` | Grafana admin credentials. |
+| `GRAFANA_LOCAL_PORT` | Loopback-only Grafana port for local admin access. |
+| `GRAFANA_ANONYMOUS_ENABLED` | Enables read-only Grafana access after Cloudflare Access. |
+| `CLOUDFLARED_TOKEN` | Cloudflare Tunnel token for the Grafana hostname. |
+| `CLOUDFLARED_IMAGE` | Cloudflared image override. |
+| `CELERY_EXPORTER_IMAGE` | Celery exporter image override. |
 | `APP_CONTAINER_STORAGE_LIMIT` | Docker writable-layer limit for app containers when the storage override is used. |
 | `WEB_CONTAINER_STORAGE_LIMIT` | Docker writable-layer limit for the web edge when the storage override is used. |
 | `DB_CONTAINER_STORAGE_LIMIT` | Docker writable-layer limit for PostgreSQL when the storage override is used. |
@@ -294,6 +340,14 @@ docker compose -f docker-compose.release.yml up -d web api celery-worker celery-
 docker image prune -f
 ```
 
+With monitoring enabled, include the monitoring overlay during updates:
+
+```bash
+docker compose -f docker-compose.release.yml -f docker-compose.release.monitoring.yml pull
+docker compose -f docker-compose.release.yml -f docker-compose.release.monitoring.yml --profile tools run --rm migrate
+docker compose -f docker-compose.release.yml -f docker-compose.release.monitoring.yml --profile monitoring up -d web api celery-worker celery-beat prometheus grafana postgres-exporter redis-exporter celery-exporter node-exporter cadvisor
+```
+
 For safer releases, use immutable tags instead of `latest`:
 
 ```env
@@ -321,6 +375,10 @@ The readiness response includes database and Redis status under `data` so
 orchestrators can distinguish process health from dependency availability.
 Redis readiness uses `HEALTH_REDIS_URL` when set, then falls back to `REDIS_URL`,
 then `CELERY_BROKER_URL`.
+
+Prometheus scrapes the same running API container through `/internal/metrics/`.
+The release Nginx gateway blocks that path publicly, so health checks and metrics
+have separate exposure rules.
 
 ## Storage Protection
 

@@ -15,6 +15,16 @@ Run `cloudflared` as:
 It routes a Cloudflare hostname to the internal API service. Secrets stay outside
 git.
 
+For production observability, the same approach protects Grafana:
+
+```text
+https://grafana.radekkriz.space -> http://grafana:3000
+```
+
+Cloudflare Access should protect the whole Grafana hostname with an email
+allowlist. This keeps Prometheus, exporters, and Django `/internal/metrics/`
+private while still allowing a reviewer to inspect dashboards.
+
 ## Kubernetes Example
 
 The example manifest is:
@@ -57,6 +67,12 @@ For the public `radekkriz.space` and `www.radekkriz.space` hostnames, use:
 ```text
 DJANGO_ALLOWED_HOSTS=radekkriz.space,www.radekkriz.space,localhost,127.0.0.1
 DJANGO_CSRF_TRUSTED_ORIGINS=https://radekkriz.space,https://www.radekkriz.space
+```
+
+For the public Grafana link on the homepage, set:
+
+```text
+PUBLIC_GRAFANA_URL=https://grafana.radekkriz.space
 ```
 
 Cloudflare terminates public HTTPS and forwards traffic into the cluster. Django
