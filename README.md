@@ -76,15 +76,17 @@ Then open:
 
 ```text
 Home: http://localhost:8000/
+UI: http://localhost:5174/
 API: http://localhost:8000/api/v1/
 OpenAPI: http://localhost:8000/api/v1/docs/
 Mailpit: http://localhost:8025
 Docs: http://localhost:8001
 ```
 
-The homepage uses `/docs/` as its documentation link. In local development Django
-redirects that path to the MkDocs container on `http://localhost:8001`; in release
-Nginx serves MkDocs directly on the same public port.
+The homepage uses `/ui/` as its frontend link and `/docs/` as its documentation
+link. In local development Django redirects those paths to the Vite and MkDocs
+services; in release Nginx serves the built UI and MkDocs directly on the same
+public port.
 
 Run migrations and tests:
 

@@ -49,6 +49,7 @@ def test_register_token_and_me_flow(client):
         "id": register_response.json()["data"]["id"],
         "email": "flow.user@example.com",
         "display_name": "Flow User",
+        "is_staff": False,
     }
 
 

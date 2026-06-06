@@ -19,6 +19,8 @@ env/
 media/
 staticfiles/
 site/
+frontend/node_modules/
+frontend/dist/
 tests/
 .idea/
 .vscode/

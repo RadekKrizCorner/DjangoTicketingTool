@@ -6,7 +6,9 @@ from typing import Any
 
 from rest_framework import serializers
 
+from apps.accounts.api.serializers import UserSummarySerializer
 from apps.common.errors import DomainError
+from apps.projects.api import capabilities
 from apps.projects.models import Project, ProjectMembership
 
 TIMEZONE_SUFFIX_RE = re.compile(r"(Z|[+-]\d{2}:\d{2})$")
@@ -50,6 +52,7 @@ class ProjectOutputSerializer(serializers.Serializer):
     name = serializers.CharField()
     description = serializers.CharField()
     owner_id = serializers.IntegerField()
+    owner = UserSummarySerializer()
     visibility = serializers.ChoiceField(choices=Project.Visibility.choices)
     state = serializers.ChoiceField(choices=Project.State.choices)
     public_comment_policy = serializers.ChoiceField(choices=Project.PublicCommentPolicy.choices)
@@ -59,6 +62,29 @@ class ProjectOutputSerializer(serializers.Serializer):
     closed_at = serializers.DateTimeField(allow_null=True)
     created_at = serializers.DateTimeField()
     updated_at = serializers.DateTimeField()
+    my_membership = serializers.SerializerMethodField()
+    capabilities = serializers.SerializerMethodField()
+
+    def get_my_membership(self, obj: Project) -> dict | None:
+        """Return current user's project membership summary."""
+        return capabilities.membership_summary(self._membership(obj))
+
+    def get_capabilities(self, obj: Project) -> dict[str, bool]:
+        """Return current user's project capabilities."""
+        user = self.context.get("user")
+        return capabilities.project_capabilities(
+            user=user,
+            project=obj,
+            membership=self._membership(obj),
+        )
+
+    def _membership(self, obj: Project) -> ProjectMembership | None:
+        """Return current user's membership from context or selectors."""
+        return capabilities.membership_for_context(
+            user=self.context.get("user"),
+            project=obj,
+            membership_map=self.context.get("membership_map"),
+        )
 
 
 class ProjectEnvelopeSerializer(serializers.Serializer):
@@ -109,6 +135,7 @@ class ProjectMembershipOutputSerializer(serializers.Serializer):
     id = serializers.IntegerField()
     project_id = serializers.IntegerField()
     user_id = serializers.IntegerField()
+    user = UserSummarySerializer()
     role = serializers.ChoiceField(choices=ProjectMembership.Role.choices)
     created_at = serializers.DateTimeField()
     updated_at = serializers.DateTimeField()
@@ -163,6 +190,7 @@ class AuditLogOutputSerializer(serializers.Serializer):
 
     id = serializers.IntegerField()
     actor_id = serializers.IntegerField(allow_null=True)
+    actor = serializers.SerializerMethodField()
     action = serializers.CharField()
     entity_type = serializers.CharField()
     entity_id = serializers.IntegerField()
@@ -174,6 +202,12 @@ class AuditLogOutputSerializer(serializers.Serializer):
     user_agent = serializers.CharField(allow_blank=True)
     idempotency_key = serializers.CharField(allow_blank=True)
     created_at = serializers.DateTimeField()
+
+    def get_actor(self, obj) -> dict | None:
+        """Return the audit actor summary."""
+        if obj.actor is None:
+            return None
+        return UserSummarySerializer(obj.actor).data
 
 
 class AuditLogPaginatedEnvelopeSerializer(serializers.Serializer):

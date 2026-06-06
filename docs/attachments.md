@@ -44,6 +44,15 @@ ATTACHMENT_MAX_TOTAL_BYTES=209715200
 ATTACHMENT_MAX_PROJECT_BYTES=20971520
 ```
 
+Clients can read project upload metadata from:
+
+```text
+GET /api/v1/projects/{project_id}/attachments/limits/
+```
+
+The response includes allowed content types, allowed text extensions, per-file
+limit, project quota, current project usage, and remaining project bytes.
+
 ## Allowed Types
 
 ```text

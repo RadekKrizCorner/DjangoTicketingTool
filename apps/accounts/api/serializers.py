@@ -14,18 +14,34 @@ def normalize_email_input(email: str) -> str:
     return get_user_model().objects.normalize_email(email)
 
 
-class UserOutputSerializer(serializers.Serializer):
-    """Serialize minimal user output."""
+class UserSummarySerializer(serializers.Serializer):
+    """Serialize public user summary output."""
 
     id = serializers.IntegerField()
     email = serializers.EmailField()
     display_name = serializers.CharField()
 
 
+class UserOutputSerializer(UserSummarySerializer):
+    """Serialize minimal user output."""
+
+
+class CurrentUserOutputSerializer(UserSummarySerializer):
+    """Serialize current user output."""
+
+    is_staff = serializers.BooleanField()
+
+
 class UserEnvelopeSerializer(serializers.Serializer):
     """Serialize a user data envelope."""
 
     data = UserOutputSerializer()
+
+
+class CurrentUserEnvelopeSerializer(serializers.Serializer):
+    """Serialize a current user data envelope."""
+
+    data = CurrentUserOutputSerializer()
 
 
 class PaginationOutputSerializer(serializers.Serializer):

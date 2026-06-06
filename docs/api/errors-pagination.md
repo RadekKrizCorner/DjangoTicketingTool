@@ -121,4 +121,5 @@ Rules:
 /api/v1/docs/
 /api/v1/redoc/
 /api/v1/projects/{project_id}/
+/api/v1/projects/{project_id}/attachments/limits/
 ```
