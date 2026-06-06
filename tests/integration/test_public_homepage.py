@@ -13,6 +13,7 @@ def test_public_homepage_lists_project_destinations(client):
     assert response.status_code == 200
     html = response.content.decode()
     assert "Django Ticketing Tool" in html
+    assert 'href="/ui/"' in html
     assert 'href="/api/v1/docs/"' in html
     assert 'href="/api/v1/redoc/"' in html
     assert 'href="/api/v1/schema/"' in html
@@ -30,6 +31,14 @@ def test_public_homepage_lists_project_destinations(client):
     assert "signal-connectors" not in html
     assert "signal-connector" not in html
     assert "signal-arrow" not in html
+
+
+def test_public_ui_path_redirects_to_local_ui_service(client):
+    """Verify the local UI path forwards to the configured frontend service."""
+    response = client.get("/ui/")
+
+    assert response.status_code == 302
+    assert response.headers["Location"] == "http://127.0.0.1:5174/"
 
 
 def test_public_docs_path_redirects_to_local_docs_service(client):

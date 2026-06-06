@@ -52,7 +52,11 @@ class ProjectListCreateView(APIView):
         )
         paginator = StandardPageNumberPagination()
         page = paginator.paginate_queryset(projects, request, view=self)
-        serializer = ProjectOutputSerializer(page, many=True)
+        serializer = ProjectOutputSerializer(
+            page,
+            many=True,
+            context=project_serializer_context(user=request.user, projects=page),
+        )
         return paginator.get_paginated_response(serializer.data)
 
     @extend_schema(
@@ -66,7 +70,10 @@ class ProjectListCreateView(APIView):
         serializer.is_valid(raise_exception=True)
         project = services.create_project(actor=request.user, data=serializer.validated_data)
         return success_response(
-            ProjectOutputSerializer(project).data,
+            ProjectOutputSerializer(
+                project,
+                context=project_serializer_context(user=request.user, projects=[project]),
+            ).data,
             status_code=status.HTTP_201_CREATED,
         )
 
@@ -80,7 +87,12 @@ class ProjectDetailView(APIView):
     def get(self, request: Request, project_id: int) -> Response:
         """Return one visible project."""
         project = selectors.project_for_user_or_404(user=request.user, project_id=project_id)
-        return success_response(ProjectOutputSerializer(project).data)
+        return success_response(
+            ProjectOutputSerializer(
+                project,
+                context=project_serializer_context(user=request.user, projects=[project]),
+            ).data
+        )
 
     @extend_schema(
         operation_id="projects_partial_update",
@@ -97,7 +109,12 @@ class ProjectDetailView(APIView):
             project=project,
             data=serializer.validated_data,
         )
-        return success_response(ProjectOutputSerializer(updated_project).data)
+        return success_response(
+            ProjectOutputSerializer(
+                updated_project,
+                context=project_serializer_context(user=request.user, projects=[updated_project]),
+            ).data
+        )
 
     @extend_schema(operation_id="projects_destroy", responses={204: None})
     def delete(self, request: Request, project_id: int) -> Response:
@@ -128,7 +145,12 @@ class ProjectOwnershipTransferView(APIView):
             project=project,
             new_owner=new_owner,
         )
-        return success_response(ProjectOutputSerializer(updated_project).data)
+        return success_response(
+            ProjectOutputSerializer(
+                updated_project,
+                context=project_serializer_context(user=request.user, projects=[updated_project]),
+            ).data
+        )
 
 
 class ProjectCloseView(APIView):
@@ -149,7 +171,12 @@ class ProjectCloseView(APIView):
             allow_staff=True,
         )
         closed_project = services.close_project(actor=request.user, project=project)
-        return success_response(ProjectOutputSerializer(closed_project).data)
+        return success_response(
+            ProjectOutputSerializer(
+                closed_project,
+                context=project_serializer_context(user=request.user, projects=[closed_project]),
+            ).data
+        )
 
 
 class ProjectReopenView(APIView):
@@ -170,7 +197,12 @@ class ProjectReopenView(APIView):
             allow_staff=True,
         )
         reopened_project = services.reopen_project(actor=request.user, project=project)
-        return success_response(ProjectOutputSerializer(reopened_project).data)
+        return success_response(
+            ProjectOutputSerializer(
+                reopened_project,
+                context=project_serializer_context(user=request.user, projects=[reopened_project]),
+            ).data
+        )
 
 
 class ProjectPublishScheduleView(APIView):
@@ -197,7 +229,12 @@ class ProjectPublishScheduleView(APIView):
             project=project,
             publish_at=serializer.validated_data["publish_at"],
         )
-        return success_response(ProjectOutputSerializer(scheduled_project).data)
+        return success_response(
+            ProjectOutputSerializer(
+                scheduled_project,
+                context=project_serializer_context(user=request.user, projects=[scheduled_project]),
+            ).data
+        )
 
     @extend_schema(
         operation_id="projects_publish_schedule_destroy",
@@ -238,7 +275,12 @@ class ProjectCloseScheduleView(APIView):
             project=project,
             close_at=serializer.validated_data["close_at"],
         )
-        return success_response(ProjectOutputSerializer(scheduled_project).data)
+        return success_response(
+            ProjectOutputSerializer(
+                scheduled_project,
+                context=project_serializer_context(user=request.user, projects=[scheduled_project]),
+            ).data
+        )
 
     @extend_schema(
         operation_id="projects_close_schedule_destroy",
@@ -373,3 +415,13 @@ def get_active_user_or_400(user_id: int):
             status_code=HTTPStatus.BAD_REQUEST,
         )
     return user
+
+
+def project_serializer_context(*, user, projects) -> dict:
+    """Return serializer context for project UI fields."""
+    project_ids = [project.id for project in projects]
+    memberships = selectors.active_memberships().filter(user=user, project_id__in=project_ids)
+    return {
+        "user": user,
+        "membership_map": {membership.project_id: membership for membership in memberships},
+    }

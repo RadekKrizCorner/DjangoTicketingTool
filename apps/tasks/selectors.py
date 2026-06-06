@@ -21,17 +21,33 @@ def non_deleted_tasks() -> QuerySet[Task]:
     ).select_related("project", "assignee")
 
 
-def visible_tasks_for_project(*, user: Any, project: Project) -> QuerySet[Task]:
+def visible_tasks_for_project(
+    *,
+    user: Any,
+    project: Project,
+    membership=None,
+) -> QuerySet[Task]:
     """Return tasks visible to a user for a project."""
-    membership = project_selectors.membership_for_user(project=project, user=user)
+    if membership is None:
+        membership = project_selectors.membership_for_user(project=project, user=user)
     if not can_read_task(membership=membership, project=project):
         return Task.objects.none()
     return non_deleted_tasks().filter(project=project).order_by("-created_at", "-id")
 
 
-def task_for_user_or_404(*, user: Any, project: Project, task_id: int) -> Task:
+def task_for_user_or_404(
+    *,
+    user: Any,
+    project: Project,
+    task_id: int,
+    membership=None,
+) -> Task:
     """Return a visible task or raise not found."""
-    task = visible_tasks_for_project(user=user, project=project).filter(pk=task_id).first()
+    task = visible_tasks_for_project(
+        user=user,
+        project=project,
+        membership=membership,
+    ).filter(pk=task_id).first()
     if task is None:
         raise_not_found()
     return task
@@ -41,7 +57,7 @@ def comments_for_task(*, task: Task) -> QuerySet[TaskComment]:
     """Return non-deleted comments for a task."""
     return (
         TaskComment.objects.filter(task=task, deleted_at__isnull=True)
-        .select_related("author", "task")
+        .select_related("author", "task", "task__project")
         .order_by("created_at", "id")
     )
 

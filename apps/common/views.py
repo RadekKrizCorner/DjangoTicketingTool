@@ -9,6 +9,15 @@ def home_page(request: HttpRequest) -> HttpResponse:
     """Render the public project homepage."""
     links = [
         {
+            "label": "Workspace UI",
+            "href": "/ui/",
+            "description": (
+                "Open the React workspace for projects, tasks, notifications, and profiles."
+            ),
+            "kind": "ui",
+            "external": False,
+        },
+        {
             "label": "Swagger API Docs",
             "href": "/api/v1/docs/",
             "description": "Explore and test the REST API in the browser.",
@@ -71,6 +80,11 @@ def home_page(request: HttpRequest) -> HttpResponse:
             }
         )
     return render(request, "common/home.html", {"links": links})
+
+
+def ui_page(_request: HttpRequest) -> HttpResponseRedirect:
+    """Redirect local Django UI path to the configured frontend service."""
+    return redirect(settings.PUBLIC_UI_URL)
 
 
 def docs_page(_request: HttpRequest) -> HttpResponseRedirect:

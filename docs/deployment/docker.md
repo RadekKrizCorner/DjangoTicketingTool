@@ -56,9 +56,9 @@ ghcr.io/<owner>/<repo>/web:<git-tag>
 ```
 
 The API image runs Django/Gunicorn and collects static files during the image
-build. The web image is built from `Dockerfile.web`; it builds MkDocs and serves
-the generated documentation through Nginx while proxying all non-`/docs/` traffic
-to Django.
+build. The web image is built from `Dockerfile.web`; it builds MkDocs and the
+React workspace UI, serves `/docs/` and `/ui/` directly through Nginx, and proxies
+the remaining traffic to Django.
 
 GHCR uses GitHub package visibility. After the first successful publish, open the
 package settings in GitHub and change visibility to public. Once public, a teacher
@@ -197,6 +197,7 @@ host port is exposed:
 
 ```text
 http://<host>:48137/
+http://<host>:48137/ui/
 http://<host>:48137/api/v1/docs/
 http://<host>:48137/docs/
 http://<host>:48137/admin/

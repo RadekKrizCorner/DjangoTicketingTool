@@ -184,6 +184,10 @@ PUBLIC_DOCUMENTATION_URL = config(
     "PUBLIC_DOCUMENTATION_URL",
     default="http://localhost:8001/",
 )
+PUBLIC_UI_URL = config(
+    "PUBLIC_UI_URL",
+    default="http://127.0.0.1:5174/",
+)
 PUBLIC_GRAFANA_URL = config("PUBLIC_GRAFANA_URL", default="")
 OBSERVABILITY_METRICS_ENABLED = config(
     "OBSERVABILITY_METRICS_ENABLED",
