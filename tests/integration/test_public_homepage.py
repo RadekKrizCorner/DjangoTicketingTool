@@ -1,6 +1,7 @@
 """Public homepage integration tests."""
 
 import pytest
+from django.test import override_settings
 
 pytestmark = pytest.mark.integration
 
@@ -37,3 +38,25 @@ def test_public_docs_path_redirects_to_local_docs_service(client):
 
     assert response.status_code == 302
     assert response.headers["Location"] == "http://localhost:8001/"
+
+
+def test_public_homepage_hides_monitoring_link_without_url(client):
+    """Verify monitoring links stay hidden until a public Grafana URL is configured."""
+    response = client.get("/")
+
+    assert response.status_code == 200
+    html = response.content.decode()
+    assert "Grafana Monitoring" not in html
+    assert "grafana.radekkriz.space" not in html
+
+
+@override_settings(PUBLIC_GRAFANA_URL="https://grafana.radekkriz.space")
+def test_public_homepage_links_to_cloudflare_access_grafana(client):
+    """Verify the homepage can advertise the protected Grafana service."""
+    response = client.get("/")
+
+    assert response.status_code == 200
+    html = response.content.decode()
+    assert 'href="https://grafana.radekkriz.space"' in html
+    assert "Grafana Monitoring" in html
+    assert "Protected dashboards for API, database, async jobs, and host health." in html

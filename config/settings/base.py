@@ -35,11 +35,13 @@ INSTALLED_APPS = [
     "apps.common",
     "apps.health",
     "apps.notifications",
+    "apps.observability",
     "apps.projects",
     "apps.tasks",
 ]
 
 MIDDLEWARE = [
+    "apps.observability.middleware.ObservabilityMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
@@ -181,6 +183,17 @@ DEFAULT_FROM_EMAIL = config("DEFAULT_FROM_EMAIL", default="noreply@example.test"
 PUBLIC_DOCUMENTATION_URL = config(
     "PUBLIC_DOCUMENTATION_URL",
     default="http://localhost:8001/",
+)
+PUBLIC_GRAFANA_URL = config("PUBLIC_GRAFANA_URL", default="")
+OBSERVABILITY_METRICS_ENABLED = config(
+    "OBSERVABILITY_METRICS_ENABLED",
+    default=False,
+    cast=bool,
+)
+OBSERVABILITY_SLOW_QUERY_SECONDS = config(
+    "OBSERVABILITY_SLOW_QUERY_SECONDS",
+    default=0.5,
+    cast=float,
 )
 
 ATTACHMENT_MAX_FILE_SIZE_BYTES = config(
