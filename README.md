@@ -5,23 +5,47 @@ UI. The project demonstrates authentication, authorization, async processing,
 auditability, deployment, reviewer-facing documentation, monitoring, and release
 operations.
 
+**Status**
+
 [![CI](https://github.com/RadekKrizCorner/DjangoTicketingTool/actions/workflows/ci.yml/badge.svg?branch=release)](https://github.com/RadekKrizCorner/DjangoTicketingTool/actions/workflows/ci.yml)
 [![Git Policy](https://github.com/RadekKrizCorner/DjangoTicketingTool/actions/workflows/git-policy.yml/badge.svg?branch=release)](https://github.com/RadekKrizCorner/DjangoTicketingTool/actions/workflows/git-policy.yml)
+
+**Backend API**
 
 <p>
   <img alt="Python 3.12" src="https://img.shields.io/badge/Python-3.12-3776AB?logo=python&amp;logoColor=white">
   <img alt="Django 5.2" src="https://img.shields.io/badge/Django-5.2-092E20?logo=django&amp;logoColor=white">
   <img alt="DRF 3.15" src="https://img.shields.io/badge/DRF-3.15-b91c1c">
   <img alt="Simple JWT" src="https://img.shields.io/badge/Auth-SimpleJWT-111827">
+</p>
+
+**Frontend Workspace**
+
+<p>
   <img alt="React 19" src="https://img.shields.io/badge/React-19-61DAFB?logo=react&amp;logoColor=111827">
   <img alt="TypeScript 6" src="https://img.shields.io/badge/TypeScript-6-3178C6?logo=typescript&amp;logoColor=white">
   <img alt="Vite 8" src="https://img.shields.io/badge/Vite-8-646CFF?logo=vite&amp;logoColor=white">
   <img alt="Tailwind CSS 4" src="https://img.shields.io/badge/Tailwind_CSS-4-06B6D4?logo=tailwindcss&amp;logoColor=white">
+</p>
+
+**Data & Async**
+
+<p>
   <img alt="PostgreSQL 16" src="https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql&amp;logoColor=white">
   <img alt="Redis 7" src="https://img.shields.io/badge/Redis-7-DC382D?logo=redis&amp;logoColor=white">
   <img alt="Celery 5.4" src="https://img.shields.io/badge/Celery-5.4-37814A">
+</p>
+
+**Observability**
+
+<p>
   <img alt="Prometheus 2.55" src="https://img.shields.io/badge/Prometheus-2.55-E6522C?logo=prometheus&amp;logoColor=white">
   <img alt="Grafana 11.3" src="https://img.shields.io/badge/Grafana-11.3-F46800?logo=grafana&amp;logoColor=white">
+</p>
+
+**Release & Quality**
+
+<p>
   <img alt="Docker Compose" src="https://img.shields.io/badge/Docker_Compose-release-2496ED?logo=docker&amp;logoColor=white">
   <img alt="Kubernetes" src="https://img.shields.io/badge/Kubernetes-manifests-326CE5?logo=kubernetes&amp;logoColor=white">
   <img alt="GHCR" src="https://img.shields.io/badge/GHCR-images-181717?logo=github&amp;logoColor=white">
