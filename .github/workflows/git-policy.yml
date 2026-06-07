@@ -52,7 +52,7 @@ jobs:
           BASE_REF: ${{ github.base_ref }}
           HEAD_REF: ${{ github.head_ref }}
         run: |
-          git fetch origin "$BASE_REF" --depth=1
+          git fetch origin "$BASE_REF"
           rev_list_options=""
           if [ "$BASE_REF" = "master" ] && [ "$HEAD_REF" = "release" ]; then
             # Release branches already validate original commits before merging.
