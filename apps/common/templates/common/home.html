@@ -72,18 +72,25 @@
       </section>
 
       <section class="link-hub" aria-label="Project links">
-        {% for link in links %}
-          <a
-            class="link-card link-card-{{ link.kind }}"
-            href="{{ link.href }}"
-            {% if link.external %}target="_blank" rel="noreferrer"{% endif %}
-          >
-            <span class="link-index">0{{ forloop.counter }}</span>
-            <span class="link-text">
-              <strong>{{ link.label }}</strong>
-              <span>{{ link.description }}</span>
-            </span>
-          </a>
+        {% for group in link_groups %}
+          <section class="link-group" aria-label="{{ group.label }} destinations">
+            <h2 class="link-group-title">{{ group.label }}</h2>
+            <div class="link-group-grid">
+              {% for link in group.links %}
+                <a
+                  class="link-card link-card-{{ link.kind }}"
+                  href="{{ link.href }}"
+                  {% if link.external %}target="_blank" rel="noreferrer"{% endif %}
+                >
+                  <span class="link-index">{{ link.index }}</span>
+                  <span class="link-text">
+                    <strong>{{ link.label }}</strong>
+                    <span>{{ link.description }}</span>
+                  </span>
+                </a>
+              {% endfor %}
+            </div>
+          </section>
         {% endfor %}
       </section>
     </main>

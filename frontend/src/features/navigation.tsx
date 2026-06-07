@@ -1,9 +1,10 @@
+import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Bell, ChevronLeft, LogOut, Menu, Search } from 'lucide-react'
 import { api } from '../lib/api'
 import type { CurrentUser, UserSummary } from '../lib/types'
 import { initials } from '../lib/utils'
-import { ConfirmButton, IconButton, Input } from '../components/ui'
+import { ConfirmButton, Dialog, IconButton, Input } from '../components/ui'
 import { useModalFocus } from '../components/useModalFocus'
 import { navItems, type ViewKey } from './navigation-model'
 
@@ -110,6 +111,7 @@ export function Topbar({
   onView: (view: ViewKey) => void
   onOpenNavigation: () => void
 }) {
+  const [searchOpen, setSearchOpen] = useState(false)
   const notificationsQuery = useQuery({ queryKey: ['notifications'], queryFn: api.notifications })
   const unread = notificationsQuery.data?.filter((item) => !item.read_at).length ?? 0
   const currentLabel = navItems.find((item) => item.key === view)?.label ?? 'Dashboard'
@@ -128,10 +130,13 @@ export function Topbar({
         </div>
       </div>
       <div className="toolbar">
-        <div className="search-box">
+        <div className="search-box desktop-search-box">
           <Search size={15} aria-hidden="true" style={{ position: 'absolute', left: 11, top: 11, color: 'var(--muted)' }} />
-          <Input style={{ paddingLeft: 34 }} placeholder="Search projects, tasks, people" />
+          <Input className="desktop-search-input" style={{ paddingLeft: 34 }} placeholder="Search projects, tasks, people" />
         </div>
+        <IconButton aria-label="Open search" className="mobile-search-trigger" onClick={() => setSearchOpen(true)}>
+          <Search size={16} aria-hidden="true" />
+        </IconButton>
         <IconButton
           aria-label={`Notifications, ${unreadLabel}`}
           className="notification-button"
@@ -144,6 +149,19 @@ export function Topbar({
           <Avatar user={user} />
         </button>
       </div>
+      <Dialog title="Search Workspace" open={searchOpen} onClose={() => setSearchOpen(false)}>
+        <div className="mobile-search-panel">
+          <div className="search-box mobile-search-box">
+            <Search size={16} aria-hidden="true" style={{ position: 'absolute', left: 13, top: 14, color: 'var(--muted)' }} />
+            <Input
+              className="mobile-search-input"
+              data-autofocus="true"
+              style={{ paddingLeft: 38 }}
+              placeholder="Search projects, tasks, people"
+            />
+          </div>
+        </div>
+      </Dialog>
     </header>
   )
 }

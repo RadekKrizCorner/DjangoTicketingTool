@@ -39,16 +39,16 @@ export function Field({
   )
 }
 
-export function Input(props: InputHTMLAttributes<HTMLInputElement>) {
-  return <input className={cn('input', props.className)} {...props} />
+export function Input({ className, ...props }: InputHTMLAttributes<HTMLInputElement>) {
+  return <input className={cn('input', className)} {...props} />
 }
 
-export function Select(props: SelectHTMLAttributes<HTMLSelectElement>) {
-  return <select className={cn('select', props.className)} {...props} />
+export function Select({ className, ...props }: SelectHTMLAttributes<HTMLSelectElement>) {
+  return <select className={cn('select', className)} {...props} />
 }
 
-export function Textarea(props: TextareaHTMLAttributes<HTMLTextAreaElement>) {
-  return <textarea className={cn('textarea', props.className)} {...props} />
+export function Textarea({ className, ...props }: TextareaHTMLAttributes<HTMLTextAreaElement>) {
+  return <textarea className={cn('textarea', className)} {...props} />
 }
 
 export function Badge({ children, tone }: { children: ReactNode; tone?: string }) {
@@ -216,8 +216,8 @@ export function ConfirmButton({
 
 export function DataTable({ children }: { children: ReactNode }) {
   return (
-    <div className="table-wrap">
-      <table className="data-table">{children}</table>
+    <div className="table-wrap responsive-table">
+      <table className="data-table responsive-cards">{children}</table>
     </div>
   )
 }

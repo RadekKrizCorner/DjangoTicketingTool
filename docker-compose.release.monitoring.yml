@@ -129,7 +129,9 @@ services:
     restart: unless-stopped
     profiles:
       - cloudflare
-    command: tunnel --no-autoupdate run --token ${CLOUDFLARED_TOKEN:?set CLOUDFLARED_TOKEN}
+    command: tunnel --no-autoupdate run --token ${CLOUDFLARED_TOKEN:-}
+    environment:
+      CLOUDFLARED_TOKEN: ${CLOUDFLARED_TOKEN:-}
     labels:
       com.cloudflare.tunnel.public_hostname: grafana.radekkriz.space
       com.cloudflare.tunnel.service: http://grafana:3000

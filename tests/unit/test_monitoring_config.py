@@ -57,3 +57,12 @@ def test_monitoring_compose_does_not_publish_grafana_publicly():
     assert "- ${GRAFANA_LOCAL_PORT:-3000}:3000" not in compose_text
     assert "cloudflared:" in compose_text
     assert "http://grafana:3000" in compose_text
+
+
+def test_monitoring_compose_does_not_require_cloudflare_token_to_parse():
+    """Verify monitoring-only Compose commands do not require a tunnel token."""
+    compose_text = (REPO_ROOT / "docker-compose.release.monitoring.yml").read_text()
+
+    assert "CLOUDFLARED_TOKEN:?set CLOUDFLARED_TOKEN" not in compose_text
+    assert "CLOUDFLARED_TOKEN: ${CLOUDFLARED_TOKEN:-}" in compose_text
+    assert "--token ${CLOUDFLARED_TOKEN:-}" in compose_text

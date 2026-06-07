@@ -30,6 +30,7 @@ type RequestOptions = {
   body?: unknown
   token?: string | null
   formData?: FormData
+  retryOnAuth?: boolean
 }
 
 export class ApiError extends Error {
@@ -62,6 +63,34 @@ export function storeSession(session: AuthSession | null) {
   localStorage.setItem(TOKEN_KEY, JSON.stringify(session))
 }
 
+function isTokenNotValid(status: number, payload: { errors?: { code: string }[] }) {
+  return status === 401 && (payload.errors ?? []).some((error) => error.code === 'token_not_valid')
+}
+
+async function refreshStoredSession(): Promise<AuthSession | null> {
+  const session = getStoredSession()
+  if (!session?.refresh) return null
+
+  const response = await fetch(`${API_BASE}/users/token/refresh/`, {
+    method: 'POST',
+    headers: new Headers({ 'Content-Type': 'application/json' }),
+    body: JSON.stringify({ refresh: session.refresh }),
+  })
+
+  if (!response.ok) {
+    storeSession(null)
+    return null
+  }
+
+  const payload = (await response.json()) as Envelope<AuthSession>
+  const nextSession = {
+    access: payload.data.access,
+    refresh: payload.data.refresh ?? session.refresh,
+  }
+  storeSession(nextSession)
+  return nextSession
+}
+
 async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const headers = new Headers()
   const token = options.token ?? getStoredSession()?.access
@@ -85,6 +114,12 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
 
   const payload = await response.json()
   if (!response.ok) {
+    if (options.retryOnAuth !== false && token && isTokenNotValid(response.status, payload)) {
+      const nextSession = await refreshStoredSession()
+      if (nextSession) {
+        return request<T>(path, { ...options, token: nextSession.access, retryOnAuth: false })
+      }
+    }
     throw new ApiError(response.status, payload.errors ?? [])
   }
   return payload as T
