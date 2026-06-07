@@ -130,6 +130,8 @@ docker compose \
 
 Grafana binds to `127.0.0.1:${GRAFANA_LOCAL_PORT:-3000}` for local admin access.
 Prometheus and all exporters stay internal to the Compose network.
+Before rolling out a Grafana major-version upgrade, back up the `grafana_data`
+volume because Grafana may migrate dashboard and folder metadata on startup.
 
 To publish Grafana through Cloudflare Access, configure
 `grafana.radekkriz.space` in Cloudflare Zero Trust, set `CLOUDFLARED_TOKEN`, and

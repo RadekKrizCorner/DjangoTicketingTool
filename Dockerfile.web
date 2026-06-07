@@ -13,7 +13,7 @@ RUN npm ci
 COPY frontend /frontend
 RUN VITE_DEMO_MODE=live VITE_API_BASE_URL=/api/v1 VITE_BASE_PATH=/ui/ npm run build
 
-FROM nginx:1.27-alpine
+FROM nginx:1.30-alpine
 
 COPY deploy/release/nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=docs-build /site /usr/share/nginx/html/docs
