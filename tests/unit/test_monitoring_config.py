@@ -59,6 +59,33 @@ def test_monitoring_compose_does_not_publish_grafana_publicly():
     assert "http://grafana:3000" in compose_text
 
 
+def test_monitoring_compose_uses_current_runtime_images():
+    """Verify release monitoring uses current pinned runtime images."""
+    compose_text = (REPO_ROOT / "docker-compose.release.monitoring.yml").read_text()
+
+    expected_images = [
+        "prom/prometheus:v3.12.0",
+        "grafana/grafana:13.0.2",
+        "quay.io/prometheuscommunity/postgres-exporter:v0.18.1",
+        "oliver006/redis_exporter:v1.77.0",
+        "quay.io/prometheus/node-exporter:v1.10.2",
+        "ghcr.io/google/cadvisor:v0.57.0",
+    ]
+    retired_images = [
+        "prom/prometheus:v2.55.1",
+        "grafana/grafana:11.3.1",
+        "quay.io/prometheuscommunity/postgres-exporter:v0.15.0",
+        "oliver006/redis_exporter:v1.62.0",
+        "quay.io/prometheus/node-exporter:v1.8.2",
+        "gcr.io/cadvisor/cadvisor:v0.49.1",
+    ]
+
+    for image in expected_images:
+        assert image in compose_text
+    for image in retired_images:
+        assert image not in compose_text
+
+
 def test_monitoring_compose_does_not_require_cloudflare_token_to_parse():
     """Verify monitoring-only Compose commands do not require a tunnel token."""
     compose_text = (REPO_ROOT / "docker-compose.release.monitoring.yml").read_text()
@@ -66,3 +93,12 @@ def test_monitoring_compose_does_not_require_cloudflare_token_to_parse():
     assert "CLOUDFLARED_TOKEN:?set CLOUDFLARED_TOKEN" not in compose_text
     assert "CLOUDFLARED_TOKEN: ${CLOUDFLARED_TOKEN:-}" in compose_text
     assert "--token ${CLOUDFLARED_TOKEN:-}" in compose_text
+
+
+def test_prometheus_config_sets_version_3_text_fallbacks():
+    """Verify Prometheus 3 scrapes can fall back to the classic text protocol."""
+    prometheus_config = (
+        REPO_ROOT / "deploy/monitoring/prometheus/prometheus.yml"
+    ).read_text()
+
+    assert prometheus_config.count("fallback_scrape_protocol: PrometheusText0.0.4") == 7

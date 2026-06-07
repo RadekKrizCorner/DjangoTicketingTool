@@ -21,7 +21,8 @@ def test_release_web_image_build_steps_use_build_platform() -> None:
 
     assert "FROM --platform=$BUILDPLATFORM squidfunk/mkdocs-material:9 AS docs-build" in dockerfile
     assert "FROM --platform=$BUILDPLATFORM node:22-alpine AS frontend-build" in dockerfile
-    assert "FROM nginx:1.27-alpine" in dockerfile
+    assert "FROM nginx:1.30-alpine" in dockerfile
+    assert "FROM nginx:1.27-alpine" not in dockerfile
 
 
 def test_release_nginx_serves_ui_before_api_proxy() -> None:
