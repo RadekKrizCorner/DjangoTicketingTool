@@ -1,11 +1,11 @@
-FROM squidfunk/mkdocs-material:9 AS docs-build
+FROM --platform=$BUILDPLATFORM squidfunk/mkdocs-material:9 AS docs-build
 
 WORKDIR /docs
 COPY mkdocs.yml /docs/mkdocs.yml
 COPY docs /docs/docs
 RUN mkdocs build --site-dir /site
 
-FROM node:22-alpine AS frontend-build
+FROM --platform=$BUILDPLATFORM node:22-alpine AS frontend-build
 
 WORKDIR /frontend
 COPY frontend/package.json frontend/package-lock.json /frontend/
