@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Toaster } from 'sonner'
 import { api, getStoredSession, isDemoMode, storeSession } from './lib/api'
@@ -10,20 +10,34 @@ import { ProjectsView } from './features/projects'
 import { TaskListPage } from './features/task-lists'
 import { SideRail, Sidebar, Topbar } from './features/navigation'
 import type { ViewKey } from './features/navigation-model'
+import { pathForRoute, routeForView, routeFromPath, type AppRoute, type ProjectTab } from './lib/routes'
 
 function App() {
   const [session, setSession] = useState(getStoredSession())
-  const [view, setView] = useState<ViewKey>('dashboard')
-  const [activeProjectId, setActiveProjectId] = useState<ID | null>(null)
-  const [activeTaskId, setActiveTaskId] = useState<ID | null>(null)
+  const [route, setRoute] = useState<AppRoute>(() => routeFromPath(window.location.pathname))
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const queryClient = useQueryClient()
+  const view = route.view
 
   const meQuery = useQuery({
     queryKey: ['me', session?.access],
     queryFn: api.me,
     enabled: !!session || isDemoMode,
   })
+
+  useEffect(() => {
+    const syncRoute = () => setRoute(routeFromPath(window.location.pathname))
+    window.addEventListener('popstate', syncRoute)
+    return () => window.removeEventListener('popstate', syncRoute)
+  }, [])
+
+  const navigateToRoute = (nextRoute: AppRoute) => {
+    const nextPath = pathForRoute(nextRoute)
+    if (window.location.pathname !== nextPath) {
+      window.history.pushState({}, '', nextPath)
+    }
+    setRoute(nextRoute)
+  }
 
   const handleSession = (nextSession: { access: string; refresh: string } | null) => {
     storeSession(nextSession)
@@ -32,9 +46,7 @@ function App() {
   }
 
   const navigateToView = (nextView: ViewKey) => {
-    setView(nextView)
-    setActiveProjectId(null)
-    setActiveTaskId(null)
+    navigateToRoute(routeForView(nextView))
   }
 
   const navigateFromDrawer = (nextView: ViewKey) => {
@@ -43,9 +55,11 @@ function App() {
   }
 
   const openProjectWorkspace = (projectId: ID, taskId: ID | null = null) => {
-    setActiveProjectId(projectId)
-    setActiveTaskId(taskId)
-    setView('projects')
+    navigateToRoute({ view: 'projects', projectId, taskId, projectTab: 'tasks' })
+  }
+
+  const openProjectTab = (projectId: ID, projectTab: ProjectTab) => {
+    navigateToRoute({ view: 'projects', projectId, taskId: null, projectTab })
   }
 
   if (!session && !isDemoMode) return <AuthScreen onAuthenticated={handleSession} />
@@ -74,7 +88,7 @@ function App() {
           <Topbar user={meQuery.data} view={view} onView={navigateToView} onOpenNavigation={() => setSidebarOpen(true)} />
           <div className="content">
             {isDemoMode && (
-              <div className="alert">
+              <div className="alert mobile-hidden">
                 Demo data mode is active because the frontend is not connected to a live backend.
                 Set <strong>VITE_DEMO_MODE=live</strong> and <strong>VITE_API_BASE_URL</strong> to use the Django API.
               </div>
@@ -82,10 +96,12 @@ function App() {
             {view === 'dashboard' && <Dashboard onView={navigateToView} onOpenProject={openProjectWorkspace} />}
             {view === 'projects' && (
               <ProjectsView
-                activeProjectId={activeProjectId}
-                activeTaskId={activeTaskId}
+                activeProjectId={route.projectId}
+                activeTaskId={route.taskId}
+                activeProjectTab={route.projectTab}
                 onOpenProject={openProjectWorkspace}
-                onBackToProjects={() => navigateToView('projects')}
+                onOpenProjectTab={openProjectTab}
+                onBackToProjects={() => navigateToRoute(routeForView('projects'))}
               />
             )}
             {view === 'my-tasks' && <TaskListPage title="My Tasks" queryKey={['my-tasks']} queryFn={api.myTasks} onOpenTask={openProjectWorkspace} />}

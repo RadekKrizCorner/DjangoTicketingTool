@@ -21,7 +21,7 @@ jobs:
     runs-on: ubuntu-latest
     services:
       postgres:
-        image: postgres:16-alpine
+        image: postgres:18-alpine
         env:
           POSTGRES_DB: app
           POSTGRES_USER: app
@@ -34,7 +34,7 @@ jobs:
           --health-timeout 5s
           --health-retries 5
       redis:
-        image: redis:7-alpine
+        image: redis:8-alpine
         ports:
           - 6379:6379
         options: >-
@@ -52,12 +52,12 @@ jobs:
       TEST_DATABASE_URL: postgres://app:app@127.0.0.1:5432/app
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
-          python-version: "3.12"
+          python-version: "3.14"
           cache: pip
 
       - name: Install dependencies
@@ -110,13 +110,13 @@ jobs:
       packages: write
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
+        uses: docker/setup-qemu-action@v4
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: Log in to GHCR
         if: >
@@ -124,7 +124,7 @@ jobs:
           (github.ref == 'refs/heads/master' ||
           github.ref == 'refs/heads/main' ||
           startsWith(github.ref, 'refs/tags/v'))
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -136,7 +136,7 @@ jobs:
 
       - name: Extract API Docker metadata
         id: api-meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: ghcr.io/${{ steps.image-repository.outputs.value }}/api
           tags: |
@@ -146,7 +146,7 @@ jobs:
 
       - name: Extract web Docker metadata
         id: web-meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: ghcr.io/${{ steps.image-repository.outputs.value }}/web
           tags: |
@@ -155,7 +155,7 @@ jobs:
             type=raw,value=latest,enable={{is_default_branch}}
 
       - name: Build API image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           target: runtime
@@ -173,7 +173,7 @@ jobs:
           cache-to: type=gha,mode=max,scope=api
 
       - name: Build web image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: Dockerfile.web

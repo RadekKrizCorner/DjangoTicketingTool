@@ -4,6 +4,7 @@ import { ChevronLeft, ChevronRight, Plus, SlidersHorizontal } from 'lucide-react
 import { toast } from 'sonner'
 import { api } from '../lib/api'
 import type { ID, Project, ProjectFilters } from '../lib/types'
+import type { ProjectTab } from '../lib/routes'
 import { titleCase } from '../lib/utils'
 import { ActionRow, Badge, Button, ConfirmButton, DataTable, Dialog, EmptyState, Field, Input, Panel, Select, StatusBadge, Textarea } from '../components/ui'
 import { invalidateProject, mutationError } from './helpers'
@@ -11,17 +12,19 @@ import { PageHeading } from './layout'
 import { MembersPanel, LifecyclePanel, AuditPanel, AttachmentLimitsPanel } from './project-admin'
 import { ProjectTasks } from './project-tasks'
 
-type ProjectTab = 'tasks' | 'members' | 'lifecycle' | 'audit' | 'attachments'
-
 export function ProjectsView({
   activeProjectId,
   activeTaskId,
+  activeProjectTab,
   onOpenProject,
+  onOpenProjectTab,
   onBackToProjects,
 }: {
   activeProjectId: ID | null
   activeTaskId: ID | null
+  activeProjectTab: ProjectTab
   onOpenProject: (projectId: ID, taskId?: ID | null) => void
+  onOpenProjectTab: (projectId: ID, tab: ProjectTab) => void
   onBackToProjects: () => void
 }) {
   const [filters, setFilters] = useState<ProjectFilters>({ visibility: 'all', role: 'all', ordering: '-created_at' })
@@ -38,7 +41,13 @@ export function ProjectsView({
           detail="Work through tasks first, then switch to members, lifecycle, audit, or attachment limits when needed."
           actions={<Button onClick={onBackToProjects}><ChevronLeft size={15} /> Back to projects</Button>}
         />
-        <ProjectDetail key={`${activeProjectId}-${activeTaskId ?? 'default'}`} projectId={activeProjectId} initialTaskId={activeTaskId} />
+        <ProjectDetail
+          projectId={activeProjectId}
+          initialTaskId={activeTaskId}
+          tab={activeProjectTab}
+          onTab={(tab) => onOpenProjectTab(activeProjectId, tab)}
+          onOpenTask={(taskId) => onOpenProject(activeProjectId, taskId)}
+        />
       </>
     )
   }
@@ -111,14 +120,14 @@ function ProjectTable({ projects, onSelect }: { projects: Project[]; onSelect: (
       <tbody>
         {projects.map((project) => (
           <tr key={project.id} data-testid={`project-row-${project.id}`}>
-            <td>
+            <td data-label="Name">
               <div className="strong">{project.name}</div>
               <div className="muted small">{project.description}</div>
             </td>
-            <td><StatusBadge value={project.state} tone={project.state === 'closed' ? 'tone-danger' : 'tone-success'} /></td>
-            <td><Badge>{project.my_membership?.role ?? 'public'}</Badge></td>
-            <td><Badge>{project.visibility}</Badge></td>
-            <td>
+            <td data-label="State"><StatusBadge value={project.state} tone={project.state === 'closed' ? 'tone-danger' : 'tone-success'} /></td>
+            <td data-label="Role"><Badge>{project.my_membership?.role ?? 'public'}</Badge></td>
+            <td data-label="Visibility"><Badge>{project.visibility}</Badge></td>
+            <td data-label="Action">
               <Button aria-label={`Open ${project.name}`} onClick={() => onSelect(project.id)}>
                 Open <ChevronRight size={14} />
               </Button>
@@ -130,8 +139,19 @@ function ProjectTable({ projects, onSelect }: { projects: Project[]; onSelect: (
   )
 }
 
-function ProjectDetail({ projectId, initialTaskId }: { projectId: ID; initialTaskId?: ID | null }) {
-  const [tab, setTab] = useState<ProjectTab>('tasks')
+function ProjectDetail({
+  projectId,
+  initialTaskId,
+  tab,
+  onTab,
+  onOpenTask,
+}: {
+  projectId: ID
+  initialTaskId?: ID | null
+  tab: ProjectTab
+  onTab: (tab: ProjectTab) => void
+  onOpenTask: (taskId: ID) => void
+}) {
   const projectQuery = useQuery({ queryKey: ['project', projectId], queryFn: () => api.project(projectId) })
   const project = projectQuery.data
 
@@ -149,13 +169,20 @@ function ProjectDetail({ projectId, initialTaskId }: { projectId: ID; initialTas
             key={item}
             data-testid={`project-tab-${item}`}
             className={`tab ${tab === item ? 'active' : ''}`}
-            onClick={() => setTab(item)}
+            onClick={() => onTab(item)}
           >
             {titleCase(item)}
           </button>
         ))}
       </div>
-      {tab === 'tasks' && <ProjectTasks project={project} initialTaskId={initialTaskId} />}
+      {tab === 'tasks' && (
+        <ProjectTasks
+          key={`${project.id}-${initialTaskId ?? 'overview'}`}
+          project={project}
+          initialTaskId={initialTaskId}
+          onOpenTask={onOpenTask}
+        />
+      )}
       {tab === 'members' && <MembersPanel project={project} />}
       {tab === 'lifecycle' && <LifecyclePanel project={project} />}
       {tab === 'audit' && <AuditPanel project={project} />}

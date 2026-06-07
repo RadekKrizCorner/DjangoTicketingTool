@@ -11,9 +11,18 @@ import { Avatar } from './navigation'
 
 const priorityOptions: TaskPriority[] = ['low', 'medium', 'high', 'urgent']
 
-export function ProjectTasks({ project, initialTaskId }: { project: Project; initialTaskId?: ID | null }) {
+export function ProjectTasks({
+  project,
+  initialTaskId,
+  onOpenTask,
+}: {
+  project: Project
+  initialTaskId?: ID | null
+  onOpenTask?: (taskId: ID) => void
+}) {
   const [taskDialog, setTaskDialog] = useState(false)
-  const [selectedTaskId, setSelectedTaskId] = useState<ID | null>(initialTaskId ?? null)
+  const [localSelectedTaskId, setLocalSelectedTaskId] = useState<ID | null>(null)
+  const selectedTaskId = initialTaskId ?? localSelectedTaskId
   const detailRef = useRef<HTMLDivElement>(null)
   const tasksQuery = useQuery({ queryKey: ['tasks', project.id], queryFn: () => api.tasks(project.id) })
   const tasks = tasksQuery.data ?? []
@@ -24,6 +33,11 @@ export function ProjectTasks({ project, initialTaskId }: { project: Project; ini
       detailRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'start' })
     }
   }, [selectedTask?.id])
+
+  const selectTask = (taskId: ID) => {
+    setLocalSelectedTaskId(taskId)
+    onOpenTask?.(taskId)
+  }
 
   return (
     <div className="grid project-tasks-workspace">
@@ -39,12 +53,21 @@ export function ProjectTasks({ project, initialTaskId }: { project: Project; ini
         <TaskOverview tasks={tasks} />
       </Panel>
       <Panel title="Kanban Board" subtitle="Select a task card to inspect status, comments, transitions, and attachments.">
-        <TaskBoard tasks={tasks} selectedTaskId={selectedTask?.id} onSelect={setSelectedTaskId} />
+        <TaskBoard tasks={tasks} selectedTaskId={selectedTask?.id} onSelect={selectTask} />
       </Panel>
       {selectedTask ? (
-        <div ref={detailRef}>
-          <TaskDetail project={project} task={selectedTask} />
-        </div>
+        <>
+          <div className="mobile-task-detail-summary" aria-label="Selected task detail">
+            <span className="muted small strong">Selected task detail</span>
+            <strong>{selectedTask.title}</strong>
+            <Button onClick={() => detailRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'start' })}>
+              Jump to detail
+            </Button>
+          </div>
+          <div ref={detailRef} className="task-detail-anchor">
+            <TaskDetail project={project} task={selectedTask} />
+          </div>
+        </>
       ) : (
         <EmptyState
           title={tasks.length ? 'Select a task for detail' : 'No tasks yet'}
@@ -305,11 +328,11 @@ function AttachmentList({ attachments }: { attachments: Attachment[] }) {
       <tbody>
         {attachments.map((attachment) => (
           <tr key={attachment.id}>
-            <td className="strong"><Paperclip size={14} /> {attachment.original_filename}</td>
-            <td>{attachment.content_type}</td>
-            <td>{bytes(attachment.size_bytes)}</td>
-            <td>{attachment.uploaded_by?.display_name ?? attachment.uploaded_by_id}</td>
-            <td>
+            <td data-label="File" className="strong"><Paperclip size={14} /> {attachment.original_filename}</td>
+            <td data-label="Type">{attachment.content_type}</td>
+            <td data-label="Size">{bytes(attachment.size_bytes)}</td>
+            <td data-label="Uploader">{attachment.uploaded_by?.display_name ?? attachment.uploaded_by_id}</td>
+            <td data-label="Action">
               <ActionRow>
                 <a className="button" href={api.downloadUrl(attachment.id)}>Download</a>
                 {attachment.capabilities?.can_delete && (

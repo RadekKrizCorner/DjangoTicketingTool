@@ -1,23 +1,56 @@
-<p align="center">
-  <img src="docs/assets/readme/hero.svg" alt="RKRIZ Project Management Backend portfolio banner with core backend stack chips" width="100%">
-</p>
+# RKRIZ Project Management Workspace
 
-# RKRIZ Project Management Backend
+Production-style Django/DRF project management API with a routed React workspace
+UI. The project demonstrates authentication, authorization, async processing,
+auditability, deployment, reviewer-facing documentation, monitoring, and release
+operations.
 
-Production-style Django/DRF project management API built to demonstrate backend
-engineering across authentication, authorization, async processing, auditability,
-deployment, reviewer-facing documentation, and release operations.
+**Status**
+
+[![CI](https://github.com/RadekKrizCorner/DjangoTicketingTool/actions/workflows/ci.yml/badge.svg?branch=release)](https://github.com/RadekKrizCorner/DjangoTicketingTool/actions/workflows/ci.yml)
+[![Git Policy](https://github.com/RadekKrizCorner/DjangoTicketingTool/actions/workflows/git-policy.yml/badge.svg?branch=release)](https://github.com/RadekKrizCorner/DjangoTicketingTool/actions/workflows/git-policy.yml)
+
+**Backend API**
 
 <p>
-  <img alt="Python 3.12" src="https://img.shields.io/badge/Python-3.12-3776AB?logo=python&amp;logoColor=white">
-  <img alt="Django 5.2" src="https://img.shields.io/badge/Django-5.2-092E20?logo=django&amp;logoColor=white">
-  <img alt="Django REST Framework" src="https://img.shields.io/badge/API-Django_REST_Framework-b91c1c">
-  <img alt="PostgreSQL" src="https://img.shields.io/badge/Database-PostgreSQL-4169E1?logo=postgresql&amp;logoColor=white">
-  <img alt="Redis" src="https://img.shields.io/badge/Broker-Redis-DC382D?logo=redis&amp;logoColor=white">
-  <img alt="Celery" src="https://img.shields.io/badge/Workers-Celery-37814A">
-  <img alt="Docker" src="https://img.shields.io/badge/Runtime-Docker-2496ED?logo=docker&amp;logoColor=white">
-  <img alt="Kubernetes" src="https://img.shields.io/badge/Deploy-Kubernetes-326CE5?logo=kubernetes&amp;logoColor=white">
-  <img alt="Tests" src="https://img.shields.io/badge/Tests-pytest-0A9EDC?logo=pytest&amp;logoColor=white">
+  <img alt="Python 3.14" src="https://img.shields.io/badge/Python-3.14-3776AB?logo=python&amp;logoColor=white">
+  <img alt="Django 6.0" src="https://img.shields.io/badge/Django-6.0-092E20?logo=django&amp;logoColor=white">
+  <img alt="DRF 3.17" src="https://img.shields.io/badge/DRF-3.17-b91c1c">
+  <img alt="Simple JWT 5.5" src="https://img.shields.io/badge/Auth-SimpleJWT_5.5-111827">
+</p>
+
+**Frontend Workspace**
+
+<p>
+  <img alt="React 19" src="https://img.shields.io/badge/React-19-61DAFB?logo=react&amp;logoColor=111827">
+  <img alt="TypeScript 6" src="https://img.shields.io/badge/TypeScript-6-3178C6?logo=typescript&amp;logoColor=white">
+  <img alt="Vite 8" src="https://img.shields.io/badge/Vite-8-646CFF?logo=vite&amp;logoColor=white">
+  <img alt="Tailwind CSS 4" src="https://img.shields.io/badge/Tailwind_CSS-4-06B6D4?logo=tailwindcss&amp;logoColor=white">
+</p>
+
+**Data & Async**
+
+<p>
+  <img alt="PostgreSQL 18" src="https://img.shields.io/badge/PostgreSQL-18-4169E1?logo=postgresql&amp;logoColor=white">
+  <img alt="Redis 8" src="https://img.shields.io/badge/Redis-8-DC382D?logo=redis&amp;logoColor=white">
+  <img alt="Celery 5.6" src="https://img.shields.io/badge/Celery-5.6-37814A">
+</p>
+
+**Observability**
+
+<p>
+  <img alt="Prometheus 3.12" src="https://img.shields.io/badge/Prometheus-3.12-E6522C?logo=prometheus&amp;logoColor=white">
+  <img alt="Grafana 13.0" src="https://img.shields.io/badge/Grafana-13.0-F46800?logo=grafana&amp;logoColor=white">
+</p>
+
+**Release & Quality**
+
+<p>
+  <img alt="Docker Compose" src="https://img.shields.io/badge/Docker_Compose-release-2496ED?logo=docker&amp;logoColor=white">
+  <img alt="Kubernetes" src="https://img.shields.io/badge/Kubernetes-manifests-326CE5?logo=kubernetes&amp;logoColor=white">
+  <img alt="GHCR" src="https://img.shields.io/badge/GHCR-images-181717?logo=github&amp;logoColor=white">
+  <img alt="pytest" src="https://img.shields.io/badge/pytest-tests-0A9EDC?logo=pytest&amp;logoColor=white">
+  <img alt="Vitest" src="https://img.shields.io/badge/Vitest-tests-6E9F18?logo=vitest&amp;logoColor=white">
 </p>
 
 ## Reviewer Path
@@ -33,12 +66,25 @@ deployment, reviewer-facing documentation, and release operations.
 | Review security posture | [Security](docs/security.md) |
 | Inspect production monitoring | `https://grafana.radekkriz.space` |
 
+## Technology Stack
+
+| Area | Technologies |
+| --- | --- |
+| Backend API | Python 3.14, Django 6.0, Django REST Framework 3.17, Simple JWT 5.5, drf-spectacular 0.29, django-filter 25.2 |
+| Frontend workspace | React 19, TypeScript 6, Vite 8, Tailwind CSS 4, TanStack Query 5, lucide-react, Sonner |
+| Persistence and async | PostgreSQL 18, Redis 8, Celery 5.6, Celery beat |
+| Runtime and release | Docker, Docker Compose release stack, Nginx 1.30 web edge, Gunicorn 26, WhiteNoise 6.12, GHCR multi-arch images |
+| Observability | Django Prometheus metrics, Prometheus 3.12, Grafana 13.0, postgres-exporter, redis-exporter, celery-exporter, node-exporter, cAdvisor |
+| Deployment targets | Raspberry Pi or VPS release Compose, Kubernetes manifests, optional Cloudflare Tunnel and Cloudflare Access for Grafana |
+| Quality | Ruff, pytest, pytest-django, Vitest, React Testing Library, GitHub Actions, local git hooks |
+
 ## What This Demonstrates
 
 - JWT authentication and user management for an API-first backend.
 - Project memberships and role-based access boundaries.
 - Project, task, comment, attachment, audit log, and notification workflows.
 - File upload quotas and attachment handling.
+- Routed React workspace UI for dashboard, projects, tasks, notifications, and profile flows.
 - Celery worker and beat scheduling backed by Redis.
 - PostgreSQL persistence with Django migrations.
 - OpenAPI documentation generated from the API surface.
@@ -49,8 +95,8 @@ deployment, reviewer-facing documentation, and release operations.
 - Kubernetes deployment artifacts for API, worker, beat, migrations, ingress, and storage.
 - Unit, integration, and end-to-end testing strategy.
 
-This is an API-centered backend project. The public homepage is a reviewer entry
-point; it is not intended to be a full product frontend.
+This is still API-centered, but the release now includes a practical reviewer UI
+for exercising project and task workflows without using the API docs directly.
 
 ## Architecture
 
@@ -155,8 +201,15 @@ The `web` image is the public entry point in release and exposes the homepage,
 API docs, MkDocs, and admin through one host port.
 
 Monitoring is optional and runs from `docker-compose.release.monitoring.yml`.
-Grafana is intended to be published as `https://grafana.radekkriz.space` behind
-Cloudflare Access while Prometheus and `/internal/metrics/` stay private.
+The monitoring profile starts Prometheus, Grafana, postgres-exporter,
+redis-exporter, celery-exporter, node-exporter, and cAdvisor. Grafana binds only
+to loopback by default and is intended to be published as
+`https://grafana.radekkriz.space` behind Cloudflare Access while Prometheus and
+`/internal/metrics/` stay private. The optional `cloudflare` profile starts the
+bundled `cloudflared` service and requires `CLOUDFLARED_TOKEN` only when that
+profile is enabled. When Cloudflare Tunnel already runs outside this Compose
+stack, use only `--profile monitoring` and do not set `CLOUDFLARED_TOKEN` for
+this file.
 
 ## Release And Deployment
 

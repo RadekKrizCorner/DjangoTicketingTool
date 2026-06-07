@@ -40,6 +40,7 @@ describe('App', () => {
   beforeEach(() => {
     originalScrollIntoView = window.HTMLElement.prototype.scrollIntoView
     localStorage.clear()
+    window.history.pushState({}, '', '/')
   })
 
   async function openNavigation(user: ReturnType<typeof userEvent.setup>) {
@@ -80,6 +81,20 @@ describe('App', () => {
 
     expect(notificationButton).toHaveClass('notification-button')
     expect(within(notificationButton).getByText('1')).toHaveClass('notification-badge')
+  })
+
+  it('opens workspace search from a compact mobile topbar trigger', async () => {
+    const { user } = renderApp()
+
+    await screen.findByRole('heading', { name: /delivery dashboard/i })
+    expect(screen.getByPlaceholderText(/search projects, tasks, people/i)).toHaveClass('desktop-search-input')
+
+    await user.click(screen.getByRole('button', { name: /open search/i }))
+
+    const dialog = await screen.findByRole('dialog', { name: /search workspace/i })
+    const searchInput = within(dialog).getByPlaceholderText(/search projects, tasks, people/i)
+    expect(searchInput).toHaveClass('input')
+    expect(searchInput).toHaveClass('mobile-search-input')
   })
 
   it('opens the navigation drawer from the compact topbar menu trigger', async () => {
@@ -137,6 +152,39 @@ describe('App', () => {
     await user.click(await screen.findByRole('button', { name: /open launch control/i }))
     expect(await screen.findByRole('button', { name: /back to projects/i })).toBeInTheDocument()
     expect(await screen.findByRole('button', { name: /members/i })).toBeInTheDocument()
+  })
+
+  it('adds mobile labels to project list cells for card-style rendering', async () => {
+    const { user } = renderApp()
+
+    await screen.findByRole('heading', { name: /delivery dashboard/i })
+    await navigateTo(user, /^projects$/i)
+
+    const launchRow = await screen.findByTestId('project-row-10')
+    expect(launchRow.querySelector('td[data-label="Name"]')).toHaveTextContent(/launch control/i)
+    expect(launchRow.querySelector('td[data-label="State"]')).toHaveTextContent(/active/i)
+    expect(launchRow.querySelector('td[data-label="Role"]')).toHaveTextContent(/owner/i)
+    expect(launchRow.querySelector('td[data-label="Visibility"]')).toHaveTextContent(/private/i)
+  })
+
+  it('opens a project task from a shareable URL', async () => {
+    window.history.pushState({}, '', '/ui/projects/10/tasks/30')
+
+    renderApp()
+
+    expect(await screen.findByRole('heading', { name: /project workspace/i })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: /finalize deployment checklist/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /back to projects/i })).toBeInTheDocument()
+  })
+
+  it('updates the URL when opening a task from the dashboard', async () => {
+    const { user } = renderApp()
+
+    await screen.findByRole('heading', { name: /delivery dashboard/i })
+    await user.click(await screen.findByRole('button', { name: /finalize deployment checklist/i }))
+
+    expect(await screen.findByRole('heading', { name: /finalize deployment checklist/i })).toBeInTheDocument()
+    expect(window.location.pathname).toBe('/ui/projects/10/tasks/30')
   })
 
   it('links dashboard cards, projects, due-soon tasks, and header avatar to their views', async () => {
@@ -202,6 +250,7 @@ describe('App', () => {
 
     await user.click(await screen.findByRole('button', { name: /finalize deployment checklist/i }))
     expect(await screen.findByRole('heading', { name: /finalize deployment checklist/i })).toBeInTheDocument()
+    expect(screen.getByText(/selected task detail/i)).toBeInTheDocument()
     await waitFor(() => expect(scrollIntoView).toHaveBeenCalled())
 
     await user.type(screen.getByLabelText(/transition note/i), 'Verified in UI test')
@@ -271,5 +320,18 @@ describe('App', () => {
     const overviewPanel = overview.closest('section')
     expect(overviewPanel).toBeTruthy()
     expect(within(overviewPanel as HTMLElement).getByText(/^due soon$/i).nextElementSibling).toHaveTextContent('0')
+  })
+
+  it('uses a selectable timezone preference instead of free text', async () => {
+    const { user } = renderApp()
+
+    await screen.findByRole('heading', { name: /delivery dashboard/i })
+    await user.click(screen.getByRole('button', { name: /open profile/i }))
+
+    const timezone = await screen.findByLabelText(/timezone/i)
+    expect(timezone.tagName).toBe('SELECT')
+    await user.selectOptions(timezone, 'UTC')
+    expect(timezone).toHaveValue('UTC')
+    expect(screen.getByRole('option', { name: /europe\/prague/i })).toBeInTheDocument()
   })
 })
