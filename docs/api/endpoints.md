@@ -20,6 +20,10 @@ POST /api/v1/users/password-reset/confirm/
 GET  /api/v1/users/search/
 ```
 
+`GET /api/v1/users/me/` returns the current user's `id`, `email`,
+`display_name`, and `is_staff` flag. User search keeps the smaller public user
+summary shape.
+
 Implemented in PROJECT-004. User search requires authentication and returns only:
 
 ```text
@@ -62,6 +66,7 @@ DELETE /api/v1/projects/{project_id}/publish-schedule/
 PUT    /api/v1/projects/{project_id}/close-schedule/
 DELETE /api/v1/projects/{project_id}/close-schedule/
 GET    /api/v1/projects/{project_id}/audit-log/
+GET    /api/v1/projects/{project_id}/attachments/limits/
 ```
 
 Implemented in PROJECT-019. Project list supports explicit whitelisted filters:
@@ -90,6 +95,17 @@ Ordering accepts `created_at`, `updated_at`, `name`, `visibility`, `state`, and
 tie-breaker. Filters are applied only after the queryset has been scoped to
 projects visible to the authenticated user.
 
+Project responses include UI helper fields:
+
+```text
+owner
+my_membership
+capabilities
+```
+
+`capabilities` is computed from the existing project and task policy layer so
+clients can render available actions without duplicating backend permission rules.
+
 ## Members
 
 ```text
@@ -99,6 +115,8 @@ GET    /api/v1/projects/{project_id}/members/{membership_id}/
 PATCH  /api/v1/projects/{project_id}/members/{membership_id}/
 DELETE /api/v1/projects/{project_id}/members/{membership_id}/
 ```
+
+Membership responses include the nested `user` summary in addition to `user_id`.
 
 ## Tasks
 
@@ -143,6 +161,9 @@ Ordering accepts `created_at`, `updated_at`, `title`, `status`, `priority`,
 `due_at`, and `assignee_id`, with optional `-` prefix. Ordering always adds `id`
 as a stable tie-breaker.
 
+Task responses include nested `project` and `assignee` summaries,
+`allowed_transitions`, and `capabilities` for UI action rendering.
+
 ## Comments
 
 ```text
@@ -156,6 +177,8 @@ DELETE /api/v1/projects/{project_id}/tasks/{task_id}/comments/{comment_id}/
 Implemented in PROJECT-006. Members can comment on private projects. Public
 projects can additionally allow all authenticated users through
 `public_comment_policy=authenticated_users`.
+
+Comment responses include the nested `author` summary and `capabilities`.
 
 ## Task Watchers
 
@@ -181,10 +204,15 @@ GET    /api/v1/projects/{project_id}/tasks/{task_id}/comments/{comment_id}/attac
 POST   /api/v1/projects/{project_id}/tasks/{task_id}/comments/{comment_id}/attachments/
 GET    /api/v1/attachments/{attachment_id}/download/
 DELETE /api/v1/attachments/{attachment_id}/
+GET    /api/v1/projects/{project_id}/attachments/limits/
 ```
 
 Implemented in PROJECT-006. Downloads are authorized through the API and files
 are not exposed directly from `MEDIA_URL`.
+
+Attachment responses include the nested `uploaded_by` summary and `capabilities`.
+The project attachment limits endpoint returns allowed file metadata, per-file
+limit, project quota, project usage, and remaining project bytes.
 
 ## Notifications
 

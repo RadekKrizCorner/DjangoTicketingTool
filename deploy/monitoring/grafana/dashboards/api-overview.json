@@ -1,0 +1,66 @@
+{
+  "uid": "django-ticketing-api-overview",
+  "title": "API Overview",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "tags": ["django-ticketing-tool", "api"],
+  "timezone": "browser",
+  "panels": [
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "Requests / second",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 8, "w": 6, "x": 0, "y": 0},
+      "targets": [
+        {"expr": "sum(rate(django_http_requests_total[5m]))", "legendFormat": "rps", "refId": "A"}
+      ]
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "5xx / second",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 8, "w": 6, "x": 6, "y": 0},
+      "targets": [
+        {"expr": "sum(rate(django_http_requests_total{status=~\"5..\"}[5m]))", "legendFormat": "5xx", "refId": "A"}
+      ]
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "P95 latency by route",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 9, "w": 12, "x": 12, "y": 0},
+      "targets": [
+        {"expr": "histogram_quantile(0.95, sum(rate(django_http_request_duration_seconds_bucket[5m])) by (le, route))", "legendFormat": "{{route}}", "refId": "A"}
+      ],
+      "fieldConfig": {"defaults": {"unit": "s"}}
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "Requests by status",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 9, "w": 12, "x": 0, "y": 8},
+      "targets": [
+        {"expr": "sum(rate(django_http_requests_total[5m])) by (status)", "legendFormat": "{{status}}", "refId": "A"}
+      ]
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "Slow ORM queries by route",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 9, "w": 12, "x": 12, "y": 9},
+      "targets": [
+        {"expr": "sum(rate(django_db_slow_queries_total[5m])) by (route, operation)", "legendFormat": "{{route}} {{operation}}", "refId": "A"}
+      ]
+    }
+  ]
+}

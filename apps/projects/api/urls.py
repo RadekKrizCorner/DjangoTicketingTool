@@ -40,6 +40,11 @@ urlpatterns: list[URLPattern] = [
     ),
     path("<int:project_id>/audit-log/", ProjectAuditLogView.as_view(), name="project-audit-log"),
     path(
+        "<int:project_id>/attachments/limits/",
+        attachment_views.ProjectAttachmentLimitsView.as_view(),
+        name="project-attachment-limits",
+    ),
+    path(
         "<int:project_id>/members/", ProjectMemberListCreateView.as_view(), name="project-members"
     ),
     path(

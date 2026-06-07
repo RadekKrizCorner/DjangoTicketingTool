@@ -14,6 +14,7 @@ from apps.api.pagination import StandardPageNumberPagination
 from apps.api.responses import success_response
 from apps.common.errors import DomainError
 from apps.projects import selectors as project_selectors
+from apps.projects.models import ProjectMembership
 from apps.tasks import selectors, services
 from apps.tasks.api import filters as task_filters
 from apps.tasks.api.serializers import (
@@ -27,6 +28,7 @@ from apps.tasks.api.serializers import (
     TaskWatchStatusSerializer,
     task_service_data,
 )
+from apps.tasks.models import Task, TaskComment, TaskWatcher
 
 
 class TaskListCreateView(APIView):
@@ -44,13 +46,26 @@ class TaskListCreateView(APIView):
             user=request.user,
             project_id=project_id,
         )
+        membership = project_selectors.membership_for_user(project=project, user=request.user)
         tasks = task_filters.filtered_task_queryset(
             request=request,
-            queryset=selectors.visible_tasks_for_project(user=request.user, project=project),
+            queryset=selectors.visible_tasks_for_project(
+                user=request.user,
+                project=project,
+                membership=membership,
+            ),
         )
         paginator = StandardPageNumberPagination()
         page = paginator.paginate_queryset(tasks, request, view=self)
-        serializer = TaskOutputSerializer(page, many=True, context={"user": request.user})
+        serializer = TaskOutputSerializer(
+            page,
+            many=True,
+            context=task_serializer_context(
+                user=request.user,
+                tasks=page,
+                membership_map={project.id: membership} if membership else {},
+            ),
+        )
         return paginator.get_paginated_response(serializer.data)
 
     def post(self, request: Request, project_id: int) -> Response:
@@ -65,7 +80,10 @@ class TaskListCreateView(APIView):
         data["assignee"] = get_active_user_or_400(data["assignee"])
         task = services.create_task(actor=request.user, project=project, data=data)
         return success_response(
-            TaskOutputSerializer(task, context={"user": request.user}).data,
+            TaskOutputSerializer(
+                task,
+                context=task_serializer_context(user=request.user, tasks=[task]),
+            ).data,
             status_code=status.HTTP_201_CREATED,
         )
 
@@ -78,7 +96,12 @@ class TaskDetailView(APIView):
     def get(self, request: Request, project_id: int, task_id: int) -> Response:
         """Return one visible task."""
         task = get_visible_task(request=request, project_id=project_id, task_id=task_id)
-        return success_response(TaskOutputSerializer(task, context={"user": request.user}).data)
+        return success_response(
+            TaskOutputSerializer(
+                task,
+                context=task_serializer_context(user=request.user, tasks=[task]),
+            ).data
+        )
 
     def patch(self, request: Request, project_id: int, task_id: int) -> Response:
         """Update a task."""
@@ -90,7 +113,10 @@ class TaskDetailView(APIView):
             data["assignee"] = get_active_user_or_400(data["assignee"])
         updated_task = services.update_task(actor=request.user, task=task, data=data)
         return success_response(
-            TaskOutputSerializer(updated_task, context={"user": request.user}).data
+            TaskOutputSerializer(
+                updated_task,
+                context=task_serializer_context(user=request.user, tasks=[updated_task]),
+            ).data
         )
 
     def delete(self, request: Request, project_id: int, task_id: int) -> Response:
@@ -117,7 +143,10 @@ class TaskTransitionView(APIView):
             note=serializer.validated_data.get("note", ""),
         )
         return success_response(
-            TaskOutputSerializer(updated_task, context={"user": request.user}).data
+            TaskOutputSerializer(
+                updated_task,
+                context=task_serializer_context(user=request.user, tasks=[updated_task]),
+            ).data
         )
 
 
@@ -152,7 +181,11 @@ class TaskCommentListCreateView(APIView):
         comments = selectors.comments_for_task(task=task)
         paginator = StandardPageNumberPagination()
         page = paginator.paginate_queryset(comments, request, view=self)
-        serializer = TaskCommentOutputSerializer(page, many=True)
+        serializer = TaskCommentOutputSerializer(
+            page,
+            many=True,
+            context=comment_serializer_context(user=request.user, comments=page),
+        )
         return paginator.get_paginated_response(serializer.data)
 
     def post(self, request: Request, project_id: int, task_id: int) -> Response:
@@ -166,7 +199,10 @@ class TaskCommentListCreateView(APIView):
             body=serializer.validated_data["body"],
         )
         return success_response(
-            TaskCommentOutputSerializer(comment).data,
+            TaskCommentOutputSerializer(
+                comment,
+                context=comment_serializer_context(user=request.user, comments=[comment]),
+            ).data,
             status_code=status.HTTP_201_CREATED,
         )
 
@@ -184,7 +220,12 @@ class TaskCommentDetailView(APIView):
             task_id=task_id,
             comment_id=comment_id,
         )
-        return success_response(TaskCommentOutputSerializer(comment).data)
+        return success_response(
+            TaskCommentOutputSerializer(
+                comment,
+                context=comment_serializer_context(user=request.user, comments=[comment]),
+            ).data
+        )
 
     def patch(self, request: Request, project_id: int, task_id: int, comment_id: int) -> Response:
         """Update one task comment."""
@@ -201,7 +242,12 @@ class TaskCommentDetailView(APIView):
             comment=comment,
             body=serializer.validated_data["body"],
         )
-        return success_response(TaskCommentOutputSerializer(updated_comment).data)
+        return success_response(
+            TaskCommentOutputSerializer(
+                updated_comment,
+                context=comment_serializer_context(user=request.user, comments=[updated_comment]),
+            ).data
+        )
 
     def delete(
         self,
@@ -238,7 +284,11 @@ class MyTasksView(APIView):
         )
         paginator = StandardPageNumberPagination()
         page = paginator.paginate_queryset(tasks, request, view=self)
-        serializer = TaskOutputSerializer(page, many=True, context={"user": request.user})
+        serializer = TaskOutputSerializer(
+            page,
+            many=True,
+            context=task_serializer_context(user=request.user, tasks=page),
+        )
         return paginator.get_paginated_response(serializer.data)
 
 
@@ -259,17 +309,38 @@ class DueSoonTasksView(APIView):
         )
         paginator = StandardPageNumberPagination()
         page = paginator.paginate_queryset(tasks, request, view=self)
-        serializer = TaskOutputSerializer(page, many=True, context={"user": request.user})
+        serializer = TaskOutputSerializer(
+            page,
+            many=True,
+            context=task_serializer_context(user=request.user, tasks=page),
+        )
         return paginator.get_paginated_response(serializer.data)
 
 
 def get_visible_task(*, request: Request, project_id: int, task_id: int):
     """Return a task visible to the request user."""
+    task, _membership = get_visible_task_with_membership(
+        request=request,
+        project_id=project_id,
+        task_id=task_id,
+    )
+    return task
+
+
+def get_visible_task_with_membership(*, request: Request, project_id: int, task_id: int):
+    """Return a task and membership visible to the request user."""
     project = project_selectors.project_for_user_or_404(
         user=request.user,
         project_id=project_id,
     )
-    return selectors.task_for_user_or_404(user=request.user, project=project, task_id=task_id)
+    membership = project_selectors.membership_for_user(project=project, user=request.user)
+    task = selectors.task_for_user_or_404(
+        user=request.user,
+        project=project,
+        task_id=task_id,
+        membership=membership,
+    )
+    return task, membership
 
 
 def get_visible_comment(*, request: Request, project_id: int, task_id: int, comment_id: int):
@@ -290,3 +361,48 @@ def get_active_user_or_400(user_id: int):
             status_code=HTTPStatus.BAD_REQUEST,
         )
     return user
+
+
+def task_serializer_context(*, user, tasks: list[Task], membership_map: dict | None = None) -> dict:
+    """Return serializer context for task UI fields."""
+    task_list = list(tasks)
+    project_ids = {task.project_id for task in task_list}
+    task_ids = {task.id for task in task_list}
+    if membership_map is None:
+        memberships = ProjectMembership.objects.filter(
+            deleted_at__isnull=True,
+            project__deleted_at__isnull=True,
+            user=user,
+            project_id__in=project_ids,
+        )
+        membership_map = {membership.project_id: membership for membership in memberships}
+    watched_task_ids = set(
+        TaskWatcher.objects.filter(
+            deleted_at__isnull=True,
+            user=user,
+            task_id__in=task_ids,
+            task__project__memberships__user=user,
+            task__project__memberships__deleted_at__isnull=True,
+        ).values_list("task_id", flat=True)
+    )
+    return {
+        "user": user,
+        "membership_map": membership_map,
+        "watched_task_ids": watched_task_ids,
+    }
+
+
+def comment_serializer_context(*, user, comments: list[TaskComment]) -> dict:
+    """Return serializer context for comment UI fields."""
+    comment_list = list(comments)
+    project_ids = {comment.task.project_id for comment in comment_list}
+    memberships = ProjectMembership.objects.filter(
+        deleted_at__isnull=True,
+        project__deleted_at__isnull=True,
+        user=user,
+        project_id__in=project_ids,
+    )
+    return {
+        "user": user,
+        "membership_map": {membership.project_id: membership for membership in memberships},
+    }

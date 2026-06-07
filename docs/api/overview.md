@@ -139,6 +139,11 @@ Success:
 }
 ```
 
+Authenticated application responses may include UI helper fields such as
+`capabilities`, `my_membership`, and nested user summaries. These fields are
+additive and are derived from the same backend policy checks that protect the
+write endpoints.
+
 Error:
 
 ```json

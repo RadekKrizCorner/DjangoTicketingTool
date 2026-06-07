@@ -1,0 +1,69 @@
+{
+  "uid": "django-ticketing-infrastructure",
+  "title": "Infrastructure",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "tags": ["django-ticketing-tool", "infrastructure"],
+  "timezone": "browser",
+  "panels": [
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "Host load 1m",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 7, "w": 6, "x": 0, "y": 0},
+      "targets": [
+        {"expr": "node_load1", "legendFormat": "load", "refId": "A"}
+      ]
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Filesystem free",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 7, "w": 6, "x": 6, "y": 0},
+      "targets": [
+        {"expr": "min(node_filesystem_avail_bytes{fstype!~\"tmpfs|overlay\"})", "legendFormat": "bytes", "refId": "A"}
+      ],
+      "fieldConfig": {"defaults": {"unit": "bytes"}}
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "Container CPU seconds",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 9, "w": 12, "x": 12, "y": 0},
+      "targets": [
+        {"expr": "sum(rate(container_cpu_usage_seconds_total{name!=\"\"}[5m])) by (name)", "legendFormat": "{{name}}", "refId": "A"}
+      ]
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "Container memory",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 9, "w": 12, "x": 0, "y": 7},
+      "targets": [
+        {"expr": "sum(container_memory_working_set_bytes{name!=\"\"}) by (name)", "legendFormat": "{{name}}", "refId": "A"}
+      ],
+      "fieldConfig": {"defaults": {"unit": "bytes"}}
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "Attachment storage and quota",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 9, "w": 12, "x": 12, "y": 9},
+      "targets": [
+        {"expr": "django_attachment_storage_bytes", "legendFormat": "used {{scope}}", "refId": "A"},
+        {"expr": "django_attachment_quota_bytes", "legendFormat": "quota {{scope}}", "refId": "B"}
+      ],
+      "fieldConfig": {"defaults": {"unit": "bytes"}}
+    }
+  ]
+}

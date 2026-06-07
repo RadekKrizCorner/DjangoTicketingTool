@@ -1,0 +1,38 @@
+groups:
+  - name: django-ticketing-tool
+    rules:
+      - alert: ApiHighErrorRate
+        expr: sum(rate(django_http_requests_total{status=~"5.."}[5m])) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: API 5xx rate is elevated
+          description: More than 0.05 API 5xx responses per second were observed for five minutes.
+
+      - alert: ApiP95LatencyHigh
+        expr: histogram_quantile(0.95, sum(rate(django_http_request_duration_seconds_bucket[5m])) by (le)) > 1
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: API p95 latency is above one second
+          description: Django request latency is high enough to impact API clients.
+
+      - alert: SlowQueriesDetected
+        expr: sum(rate(django_db_slow_queries_total[5m])) > 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: Slow ORM queries were detected
+          description: Review the Database Performance dashboard to identify affected routes.
+
+      - alert: RedisExporterDown
+        expr: up{job="redis"} == 0
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: Redis exporter is down
+          description: Prometheus cannot scrape Redis health and performance metrics.

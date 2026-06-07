@@ -10,6 +10,8 @@ from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 from apps.accounts import selectors, services
 from apps.accounts.api.serializers import (
+    CurrentUserEnvelopeSerializer,
+    CurrentUserOutputSerializer,
     EmailTokenObtainPairSerializer,
     EmptyDataEnvelopeSerializer,
     LogoutInputSerializer,
@@ -128,10 +130,10 @@ class MeView(APIView):
 
     permission_classes = (IsAuthenticated,)
 
-    @extend_schema(responses={200: UserEnvelopeSerializer})
+    @extend_schema(responses={200: CurrentUserEnvelopeSerializer})
     def get(self, request: Request) -> Response:
         """Return minimal data for the authenticated user."""
-        return success_response(UserOutputSerializer(request.user).data)
+        return success_response(CurrentUserOutputSerializer(request.user).data)
 
 
 class ProfileView(APIView):

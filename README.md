@@ -31,6 +31,7 @@ deployment, reviewer-facing documentation, and release operations.
 | Review quality strategy | [Testing Strategy](docs/testing/strategy.md) |
 | Check release readiness | [Docker](docs/deployment/docker.md), [Kubernetes](docs/deployment/kubernetes.md) |
 | Review security posture | [Security](docs/security.md) |
+| Inspect production monitoring | `https://grafana.radekkriz.space` |
 
 ## What This Demonstrates
 
@@ -44,6 +45,7 @@ deployment, reviewer-facing documentation, and release operations.
 - Reviewer-facing homepage that routes to API docs and MkDocs.
 - Docker Compose local development and published image release flow.
 - Single-port release gateway for homepage, API docs, MkDocs, and admin.
+- Prometheus and Grafana monitoring with Cloudflare Access protected dashboards.
 - Kubernetes deployment artifacts for API, worker, beat, migrations, ingress, and storage.
 - Unit, integration, and end-to-end testing strategy.
 
@@ -74,15 +76,17 @@ Then open:
 
 ```text
 Home: http://localhost:8000/
+UI: http://localhost:5174/
 API: http://localhost:8000/api/v1/
 OpenAPI: http://localhost:8000/api/v1/docs/
 Mailpit: http://localhost:8025
 Docs: http://localhost:8001
 ```
 
-The homepage uses `/docs/` as its documentation link. In local development Django
-redirects that path to the MkDocs container on `http://localhost:8001`; in release
-Nginx serves MkDocs directly on the same public port.
+The homepage uses `/ui/` as its frontend link and `/docs/` as its documentation
+link. In local development Django redirects those paths to the Vite and MkDocs
+services; in release Nginx serves the built UI and MkDocs directly on the same
+public port.
 
 Run migrations and tests:
 
@@ -150,6 +154,10 @@ ghcr.io/<owner>/<repo>/web:<tag>
 The `web` image is the public entry point in release and exposes the homepage,
 API docs, MkDocs, and admin through one host port.
 
+Monitoring is optional and runs from `docker-compose.release.monitoring.yml`.
+Grafana is intended to be published as `https://grafana.radekkriz.space` behind
+Cloudflare Access while Prometheus and `/internal/metrics/` stay private.
+
 ## Release And Deployment
 
 The repository includes release-oriented Docker and Kubernetes artifacts:
@@ -162,6 +170,7 @@ The repository includes release-oriented Docker and Kubernetes artifacts:
 - Kubernetes manifests for API, Celery worker, Celery beat, migrations, service,
   ingress, and media storage.
 - Optional Cloudflare Tunnel deployment example for clusters without a public IP.
+- Optional Prometheus, Grafana, and exporter overlay for production observability.
 
 See:
 

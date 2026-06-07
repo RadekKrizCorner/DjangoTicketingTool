@@ -19,8 +19,16 @@
           <span class="brand-name">Django Ticketing Tool</span>
         </a>
         <div class="nav-links">
+          <a href="/ui/">UI</a>
           <a href="/api/v1/docs/">API</a>
           <a href="/docs/">Docs</a>
+          {% if links %}
+            {% for link in links %}
+              {% if link.kind == "monitoring" %}
+                <a href="{{ link.href }}" target="_blank" rel="noreferrer">Monitoring</a>
+              {% endif %}
+            {% endfor %}
+          {% endif %}
           <a href="/admin/">Admin</a>
         </div>
       </nav>
@@ -33,7 +41,8 @@
             comments, attachments, notifications, audit history, and API-first delivery.
           </p>
           <div class="hero-actions" aria-label="Primary destinations">
-            <a class="button button-primary" href="/api/v1/docs/">Swagger</a>
+            <a class="button button-primary" href="/ui/">Web UI</a>
+            <a class="button button-secondary" href="/api/v1/docs/">Swagger</a>
             <a class="button button-secondary" href="/api/v1/redoc/">ReDoc</a>
             <a
               class="button button-secondary"
@@ -41,6 +50,16 @@
               rel="noreferrer"
               target="_blank"
             >GitHub</a>
+            {% for link in links %}
+              {% if link.kind == "monitoring" %}
+                <a
+                  class="button button-secondary"
+                  href="{{ link.href }}"
+                  rel="noreferrer"
+                  target="_blank"
+                >Monitoring</a>
+              {% endif %}
+            {% endfor %}
           </div>
         </div>
 
