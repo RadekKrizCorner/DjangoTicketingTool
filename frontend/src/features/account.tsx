@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Check, LogOut } from 'lucide-react'
 import { toast } from 'sonner'
@@ -8,6 +8,13 @@ import { relativeTime } from '../lib/utils'
 import { ActionRow, Badge, Button, ConfirmButton, EmptyState, Field, Input, Panel } from '../components/ui'
 import { mutationError } from './helpers'
 import { PageHeading } from './layout'
+
+const priorityTimezones = ['UTC', 'Europe/Prague', 'Europe/London', 'Europe/Berlin', 'America/New_York', 'America/Los_Angeles', 'Asia/Tokyo']
+
+function timezoneOptions(currentTimezone?: string) {
+  const supported = typeof Intl.supportedValuesOf === 'function' ? Intl.supportedValuesOf('timeZone') : []
+  return Array.from(new Set([currentTimezone, ...priorityTimezones, ...supported].filter(Boolean) as string[]))
+}
 
 export function NotificationsView() {
   const queryClient = useQueryClient()
@@ -58,13 +65,16 @@ export function NotificationsView() {
 export function ProfileView({ user, onLoggedOut }: { user?: CurrentUser; onLoggedOut: () => void }) {
   const queryClient = useQueryClient()
   const profileQuery = useQuery({ queryKey: ['profile'], queryFn: api.profile })
-  const [timezone, setTimezone] = useState('Europe/Prague')
+  const [timezoneDraft, setTimezoneDraft] = useState<string | null>(null)
+  const timezone = timezoneDraft ?? profileQuery.data?.timezone ?? 'Europe/Prague'
+  const timezones = useMemo(() => timezoneOptions(profileQuery.data?.timezone), [profileQuery.data?.timezone])
   const [oldPassword, setOldPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const updateProfileMutation = useMutation({
     mutationFn: () => api.updateProfile({ timezone }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['profile'] })
+      setTimezoneDraft(null)
       toast.success('Profile updated')
     },
   })
@@ -98,7 +108,9 @@ export function ProfileView({ user, onLoggedOut }: { user?: CurrentUser; onLogge
         <Panel title="Preferences">
           <div className="grid">
             <Field label="Timezone">
-              <Input value={timezone} onChange={(event) => setTimezone(event.target.value)} />
+              <select className="select" value={timezone} onChange={(event) => setTimezoneDraft(event.target.value)}>
+                {timezones.map((item) => <option key={item} value={item}>{item}</option>)}
+              </select>
             </Field>
             <Button variant="primary" onClick={() => updateProfileMutation.mutate()}>Save timezone</Button>
           </div>

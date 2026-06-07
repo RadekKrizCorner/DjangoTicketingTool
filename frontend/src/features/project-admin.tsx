@@ -88,10 +88,10 @@ function MemberTable({ project, members }: { project: Project; members: ProjectM
       <tbody>
         {members.map((member) => (
           <tr key={member.id}>
-            <td>
+            <td data-label="User">
               <div className="toolbar"><Avatar user={member.user} /><span>{member.user?.display_name ?? member.user_id}</span></div>
             </td>
-            <td>
+            <td data-label="Role">
               <Select
                 value={member.role}
                 disabled={!project.capabilities?.can_manage_members || member.role === 'owner'}
@@ -101,8 +101,8 @@ function MemberTable({ project, members }: { project: Project; members: ProjectM
                 {roleOptions.map((item) => <option key={item} value={item}>{titleCase(item)}</option>)}
               </Select>
             </td>
-            <td>{formatDateTime(member.created_at)}</td>
-            <td>
+            <td data-label="Added">{formatDateTime(member.created_at)}</td>
+            <td data-label="Action">
               <ActionRow>
                 {project.capabilities?.can_transfer_ownership && member.role !== 'owner' && (
                   <ConfirmButton
@@ -261,10 +261,10 @@ export function AuditPanel({ project }: { project: Project }) {
       <tbody>
         {(auditQuery.data ?? []).map((item) => (
           <tr key={item.id}>
-            <td><Badge><History size={13} /> {item.action}</Badge></td>
-            <td>{item.actor?.display_name ?? 'System'}</td>
-            <td>{item.entity_type} #{item.entity_id}</td>
-            <td>{formatDateTime(item.created_at)}</td>
+            <td data-label="Action"><Badge><History size={13} /> {item.action}</Badge></td>
+            <td data-label="Actor">{item.actor?.display_name ?? 'System'}</td>
+            <td data-label="Entity">{item.entity_type} #{item.entity_id}</td>
+            <td data-label="When">{formatDateTime(item.created_at)}</td>
           </tr>
         ))}
       </tbody>

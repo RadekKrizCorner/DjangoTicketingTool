@@ -45,16 +45,16 @@ function TaskTable({ tasks, onOpenTask }: { tasks: Task[]; onOpenTask: (projectI
       <tbody>
         {tasks.map((task) => (
           <tr key={task.id}>
-            <td>
+            <td data-label="Task">
               <div className="strong">{task.title}</div>
               <div className="muted small">{task.description}</div>
             </td>
-            <td>{task.project?.name ?? task.project_id}</td>
-            <td><StatusBadge value={task.status} tone={statusTone[task.status]} /></td>
-            <td><StatusBadge value={task.priority} tone={priorityTone[task.priority]} /></td>
-            <td>{formatDateTime(task.due_at)}</td>
-            <td>{task.watched ? <Star size={16} fill="currentColor" /> : '—'}</td>
-            <td>
+            <td data-label="Project">{task.project?.name ?? task.project_id}</td>
+            <td data-label="Status"><StatusBadge value={task.status} tone={statusTone[task.status]} /></td>
+            <td data-label="Priority"><StatusBadge value={task.priority} tone={priorityTone[task.priority]} /></td>
+            <td data-label="Due">{formatDateTime(task.due_at)}</td>
+            <td data-label="Watch">{task.watched ? <Star size={16} fill="currentColor" /> : '—'}</td>
+            <td data-label="Action">
               <Button aria-label={`Open ${task.title}`} onClick={() => onOpenTask(task.project_id, task.id)}>
                 Open <ChevronRight size={14} />
               </Button>

@@ -33,6 +33,21 @@ def test_public_homepage_lists_project_destinations(client):
     assert "signal-arrow" not in html
 
 
+@override_settings(PUBLIC_GRAFANA_URL="https://grafana.radekkriz.space")
+def test_public_homepage_groups_link_cards_into_balanced_sections(client):
+    """Verify homepage cards are grouped into stable three-column sections."""
+    response = client.get("/")
+
+    assert response.status_code == 200
+    html = response.content.decode()
+    assert 'aria-label="Product destinations"' in html
+    assert 'aria-label="API destinations"' in html
+    assert 'aria-label="Project destinations"' in html
+    assert html.index("Workspace UI") < html.index("Swagger API Docs")
+    assert html.index("Grafana Monitoring") < html.index("Swagger API Docs")
+    assert html.index("OpenAPI Schema") < html.index("MkDocs")
+
+
 def test_public_ui_path_redirects_to_local_ui_service(client):
     """Verify the local UI path forwards to the configured frontend service."""
     response = client.get("/ui/")
