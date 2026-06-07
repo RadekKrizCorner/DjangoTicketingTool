@@ -1,4 +1,4 @@
-FROM python:3.12-slim AS base
+FROM python:3.14-slim AS base
 
 ENV DJANGO_SETTINGS_MODULE=config.settings.production
 ENV PATH="/venv/bin:$PATH"

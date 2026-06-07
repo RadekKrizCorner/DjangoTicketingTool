@@ -9,8 +9,8 @@ engineering across authentication, authorization, async processing, auditability
 deployment, reviewer-facing documentation, and release operations.
 
 <p>
-  <img alt="Python 3.12" src="https://img.shields.io/badge/Python-3.12-3776AB?logo=python&amp;logoColor=white">
-  <img alt="Django 5.2" src="https://img.shields.io/badge/Django-5.2-092E20?logo=django&amp;logoColor=white">
+  <img alt="Python 3.14" src="https://img.shields.io/badge/Python-3.14-3776AB?logo=python&amp;logoColor=white">
+  <img alt="Django 6.0" src="https://img.shields.io/badge/Django-6.0-092E20?logo=django&amp;logoColor=white">
   <img alt="Django REST Framework" src="https://img.shields.io/badge/API-Django_REST_Framework-b91c1c">
   <img alt="PostgreSQL" src="https://img.shields.io/badge/Database-PostgreSQL-4169E1?logo=postgresql&amp;logoColor=white">
   <img alt="Redis" src="https://img.shields.io/badge/Broker-Redis-DC382D?logo=redis&amp;logoColor=white">
