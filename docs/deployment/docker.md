@@ -118,6 +118,13 @@ The storage override is separate because Docker Desktop, Rancher Desktop, and
 some VPS storage drivers reject `storage_opt.size`. Application quotas remain
 enabled in both modes and are the primary attachment protection.
 
+The release stack uses PostgreSQL 18 and Redis 8. When upgrading an existing
+host from PostgreSQL 16, do not start PostgreSQL 18 on the old `postgres_data`
+volume. Back up the database with `pg_dump`, move the old volume aside, start a
+fresh PostgreSQL 18 volume, restore the dump, and then run Django migrations.
+Before moving Redis 7 data to Redis 8, back up the `redis_data` volume or accept
+that Celery broker/result state can be recreated.
+
 Enable production monitoring with the monitoring overlay:
 
 ```bash
@@ -337,7 +344,13 @@ to finish. Then update the Pi:
 
 ```bash
 cd ~/django-ticketing-tool
+docker compose -f docker-compose.release.yml exec db pg_dump -U "${POSTGRES_USER:-app}" "${POSTGRES_DB:-app}" > postgres-pre-pg18.sql
+docker run --rm -v "$(basename "$PWD")_redis_data:/data:ro" -v "$PWD:/backup" alpine tar -C /data -czf /backup/redis-pre-redis8-data.tgz .
+docker compose -f docker-compose.release.yml down
+docker volume rm "$(basename "$PWD")_postgres_data"
 docker compose -f docker-compose.release.yml pull
+docker compose -f docker-compose.release.yml up -d db redis
+cat postgres-pre-pg18.sql | docker compose -f docker-compose.release.yml exec -T db psql -U "${POSTGRES_USER:-app}" -d "${POSTGRES_DB:-app}"
 docker compose -f docker-compose.release.yml --profile tools run --rm migrate
 docker compose -f docker-compose.release.yml up -d web api celery-worker celery-beat
 docker image prune -f

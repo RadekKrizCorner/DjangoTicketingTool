@@ -13,10 +13,10 @@ operations.
 **Backend API**
 
 <p>
-  <img alt="Python 3.12" src="https://img.shields.io/badge/Python-3.12-3776AB?logo=python&amp;logoColor=white">
-  <img alt="Django 5.2" src="https://img.shields.io/badge/Django-5.2-092E20?logo=django&amp;logoColor=white">
-  <img alt="DRF 3.15" src="https://img.shields.io/badge/DRF-3.15-b91c1c">
-  <img alt="Simple JWT" src="https://img.shields.io/badge/Auth-SimpleJWT-111827">
+  <img alt="Python 3.14" src="https://img.shields.io/badge/Python-3.14-3776AB?logo=python&amp;logoColor=white">
+  <img alt="Django 6.0" src="https://img.shields.io/badge/Django-6.0-092E20?logo=django&amp;logoColor=white">
+  <img alt="DRF 3.17" src="https://img.shields.io/badge/DRF-3.17-b91c1c">
+  <img alt="Simple JWT 5.5" src="https://img.shields.io/badge/Auth-SimpleJWT_5.5-111827">
 </p>
 
 **Frontend Workspace**
@@ -31,16 +31,16 @@ operations.
 **Data & Async**
 
 <p>
-  <img alt="PostgreSQL 16" src="https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql&amp;logoColor=white">
-  <img alt="Redis 7" src="https://img.shields.io/badge/Redis-7-DC382D?logo=redis&amp;logoColor=white">
-  <img alt="Celery 5.4" src="https://img.shields.io/badge/Celery-5.4-37814A">
+  <img alt="PostgreSQL 18" src="https://img.shields.io/badge/PostgreSQL-18-4169E1?logo=postgresql&amp;logoColor=white">
+  <img alt="Redis 8" src="https://img.shields.io/badge/Redis-8-DC382D?logo=redis&amp;logoColor=white">
+  <img alt="Celery 5.6" src="https://img.shields.io/badge/Celery-5.6-37814A">
 </p>
 
 **Observability**
 
 <p>
-  <img alt="Prometheus 2.55" src="https://img.shields.io/badge/Prometheus-2.55-E6522C?logo=prometheus&amp;logoColor=white">
-  <img alt="Grafana 11.3" src="https://img.shields.io/badge/Grafana-11.3-F46800?logo=grafana&amp;logoColor=white">
+  <img alt="Prometheus 3.12" src="https://img.shields.io/badge/Prometheus-3.12-E6522C?logo=prometheus&amp;logoColor=white">
+  <img alt="Grafana 13.0" src="https://img.shields.io/badge/Grafana-13.0-F46800?logo=grafana&amp;logoColor=white">
 </p>
 
 **Release & Quality**
@@ -70,11 +70,11 @@ operations.
 
 | Area | Technologies |
 | --- | --- |
-| Backend API | Python 3.12, Django 5.2, Django REST Framework 3.15, Simple JWT, drf-spectacular, django-filter |
+| Backend API | Python 3.14, Django 6.0, Django REST Framework 3.17, Simple JWT 5.5, drf-spectacular 0.29, django-filter 25.2 |
 | Frontend workspace | React 19, TypeScript 6, Vite 8, Tailwind CSS 4, TanStack Query 5, lucide-react, Sonner |
-| Persistence and async | PostgreSQL 16, Redis 7, Celery 5.4, Celery beat |
-| Runtime and release | Docker, Docker Compose release stack, Nginx web edge, Gunicorn, WhiteNoise, GHCR multi-arch images |
-| Observability | Django Prometheus metrics, Prometheus 2.55, Grafana 11.3, postgres-exporter, redis-exporter, celery-exporter, node-exporter, cAdvisor |
+| Persistence and async | PostgreSQL 18, Redis 8, Celery 5.6, Celery beat |
+| Runtime and release | Docker, Docker Compose release stack, Nginx 1.30 web edge, Gunicorn 26, WhiteNoise 6.12, GHCR multi-arch images |
+| Observability | Django Prometheus metrics, Prometheus 3.12, Grafana 13.0, postgres-exporter, redis-exporter, celery-exporter, node-exporter, cAdvisor |
 | Deployment targets | Raspberry Pi or VPS release Compose, Kubernetes manifests, optional Cloudflare Tunnel and Cloudflare Access for Grafana |
 | Quality | Ruff, pytest, pytest-django, Vitest, React Testing Library, GitHub Actions, local git hooks |
 
