@@ -31,6 +31,7 @@ import type {
   Project,
   Task,
   TaskStatus,
+  UserSummary,
 } from '../lib/types'
 import { formatDateTime, priorityTone, statusTone, titleCase } from '../lib/utils'
 import { ActionRow, Badge, Button, DataTable, Dialog, EmptyState, Field, IconButton, Input, Panel, Select, StatusBadge } from '../components/ui'
@@ -860,10 +861,22 @@ function ShareDashboardDialog({
   const queryClient = useQueryClient()
   const projectsQuery = useQuery({ queryKey: ['projects', 'dashboard-share'], queryFn: () => api.projects({}), enabled: open })
   const [targetType, setTargetType] = useState<DashboardShare['target_type']>('project_members')
-  const [targetId, setTargetId] = useState('')
+  const [selectedProjectId, setSelectedProjectId] = useState('')
+  const [userSearch, setUserSearch] = useState('')
+  const [selectedUser, setSelectedUser] = useState<UserSummary | null>(null)
   const [access, setAccess] = useState<DashboardShare['access']>('viewer')
   const [addedShares, setAddedShares] = useState<Partial<DashboardShare>[]>([])
   const [removedShareKeys, setRemovedShareKeys] = useState<Set<string>>(() => new Set())
+  const projects = projectsQuery.data ?? []
+  const selectedProject = selectedProjectId
+    ? projects.find((project) => project.id === Number(selectedProjectId)) ?? null
+    : projects[0] ?? null
+  const userSearchQuery = useQuery({
+    queryKey: ['users', 'dashboard-share', userSearch.trim()],
+    queryFn: () => api.searchUsers(userSearch.trim()),
+    enabled: open && targetType === 'user' && userSearch.trim().length >= 2,
+  })
+  const userResults = userSearchQuery.data ?? []
   const draftShareRows = useMemo(() => {
     const existingRows = shares
       .map((share, index) => {
@@ -886,6 +899,17 @@ function ShareDashboardDialog({
     () => draftShareRows.map((row) => row.share),
     [draftShareRows],
   )
+  const existingShareTargetKeys = useMemo(
+    () => new Set(draftShares.map(shareTargetKey).filter((key): key is string => key !== null)),
+    [draftShares],
+  )
+  const pendingShareTargetKey = targetType === 'project_members' && selectedProject
+    ? `project_members:${selectedProject.id}`
+    : targetType === 'user' && selectedUser
+      ? `user:${selectedUser.id}`
+      : null
+  const targetAlreadyShared = pendingShareTargetKey !== null && existingShareTargetKeys.has(pendingShareTargetKey)
+  const canAddShare = pendingShareTargetKey !== null && !targetAlreadyShared
 
   const saveSharesMutation = useMutation({
     mutationFn: () => api.saveDashboardShares(dashboard.id, draftShares),
@@ -897,17 +921,21 @@ function ShareDashboardDialog({
   })
 
   const addShare = () => {
-    const numericId = Number(targetId)
-    if (!Number.isInteger(numericId) || numericId < 1) return
+    if (targetType === 'project_members' && !selectedProject) return
+    if (targetType === 'user' && !selectedUser) return
     setAddedShares((current) => [
       ...current,
       {
         target_type: targetType,
-        user_id: targetType === 'user' ? numericId : null,
-        project_id: targetType === 'project_members' ? numericId : null,
+        user_id: targetType === 'user' ? selectedUser!.id : null,
+        user: targetType === 'user' ? selectedUser : null,
+        project_id: targetType === 'project_members' ? selectedProject!.id : null,
+        project: targetType === 'project_members' ? { id: selectedProject!.id, name: selectedProject!.name } : null,
         access,
       },
     ])
+    setSelectedUser(null)
+    setUserSearch('')
   }
 
   const removeShare = (row: DraftShareRow) => {
@@ -929,9 +957,7 @@ function ShareDashboardDialog({
                 <strong>{row.share.target_type === 'project_members' ? 'Project members' : 'Specific user'}</strong>
                 <br />
                 <span className="muted small">
-                  {row.share.target_type === 'project_members'
-                    ? projectsQuery.data?.find((project) => project.id === row.share.project_id)?.name ?? `Project ${row.share.project_id}`
-                    : `User ${row.share.user_id}`}
+                  {shareTargetLabel(row.share, projects)}
                 </span>
               </span>
               <span className="share-row-actions">
@@ -948,14 +974,77 @@ function ShareDashboardDialog({
         </div>
         <div className="form-grid">
           <Field label="Target">
-            <Select value={targetType} onChange={(event) => setTargetType(event.target.value as DashboardShare['target_type'])}>
+            <Select
+              value={targetType}
+              onChange={(event) => {
+                setTargetType(event.target.value as DashboardShare['target_type'])
+                setSelectedUser(null)
+                setUserSearch('')
+              }}
+            >
               <option value="project_members">Project members</option>
               <option value="user">Specific user</option>
             </Select>
           </Field>
-          <Field label={targetType === 'project_members' ? 'Project ID' : 'User ID'}>
-            <Input value={targetId} onChange={(event) => setTargetId(event.target.value)} inputMode="numeric" />
-          </Field>
+          {targetType === 'project_members' ? (
+            <Field label="Project">
+              <Select
+                value={selectedProject ? String(selectedProject.id) : ''}
+                onChange={(event) => setSelectedProjectId(event.target.value)}
+              >
+                {!projects.length && (
+                  <option value="" disabled>
+                    {projectsQuery.isLoading ? 'Loading projects...' : 'No projects available'}
+                  </option>
+                )}
+                {projects.map((project) => (
+                  <option key={project.id} value={String(project.id)}>{project.name}</option>
+                ))}
+              </Select>
+            </Field>
+          ) : (
+            <div className="field">
+              <span id="dashboard-share-user-search-label">Search users</span>
+              <Input
+                id="dashboard-share-user-search"
+                aria-labelledby="dashboard-share-user-search-label"
+                value={userSearch}
+                placeholder="Search by name or email"
+                onChange={(event) => {
+                  setUserSearch(event.target.value)
+                  setSelectedUser(null)
+                }}
+              />
+              {selectedUser && (
+                <div className="selected-share-target">
+                  <span>
+                    <strong>{selectedUser.display_name}</strong>
+                    <span className="muted small">{selectedUser.email}</span>
+                  </span>
+                </div>
+              )}
+              {userSearch.trim().length >= 2 && !selectedUser && (
+                <div className="share-picker-results">
+                  {userSearchQuery.isLoading && <span className="muted small">Searching users...</span>}
+                  {userResults.map((user) => (
+                    <button
+                      key={user.id}
+                      className="share-picker-result"
+                      type="button"
+                      aria-label={`Select ${user.display_name}`}
+                      onClick={() => setSelectedUser(user)}
+                    >
+                      <strong>{user.display_name}</strong>
+                      <span className="muted small">{user.email}</span>
+                    </button>
+                  ))}
+                  {!userSearchQuery.isLoading && userResults.length === 0 && (
+                    <span className="muted small">No users match</span>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
           <Field label="Access">
             <Select value={access} onChange={(event) => setAccess(event.target.value as DashboardShare['access'])}>
               <option value="viewer">Viewer</option>
@@ -963,8 +1052,8 @@ function ShareDashboardDialog({
             </Select>
           </Field>
           <div className="field">
-            <span>&nbsp;</span>
-            <Button onClick={addShare}>Add share</Button>
+            <span>{targetAlreadyShared ? 'Already shared' : '\u00a0'}</span>
+            <Button disabled={!canAddShare} onClick={addShare}>Add share</Button>
           </div>
         </div>
         <ActionRow>
@@ -986,6 +1075,26 @@ function filterDashboards(dashboards: ConfigurableDashboard[], search: string) {
       .toLowerCase()
       .includes(query),
   )
+}
+
+function shareTargetLabel(share: Partial<DashboardShare>, projects: Project[]) {
+  if (share.target_type === 'project_members') {
+    return share.project?.name ?? projects.find((project) => project.id === share.project_id)?.name ?? `Project ${share.project_id}`
+  }
+  if (share.user?.display_name && share.user.email) {
+    return `${share.user.display_name} (${share.user.email})`
+  }
+  return share.user?.display_name ?? share.user?.email ?? `User ${share.user_id}`
+}
+
+function shareTargetKey(share: Partial<DashboardShare>) {
+  if (share.target_type === 'project_members' && share.project_id) {
+    return `project_members:${share.project_id}`
+  }
+  if (share.target_type === 'user' && share.user_id) {
+    return `user:${share.user_id}`
+  }
+  return null
 }
 
 function cacheSavedDashboardLayout(queryClient: ReturnType<typeof useQueryClient>, dashboardId: ID, widgets: DashboardWidget[]) {

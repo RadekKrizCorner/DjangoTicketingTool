@@ -761,7 +761,7 @@ a {
   flex-wrap: nowrap;
   justify-content: flex-end;
   max-width: 100%;
-  overflow-x: auto;
+  overflow: visible;
   padding-bottom: 2px;
 }
 
@@ -1145,7 +1145,53 @@ a {
 .share-row-actions {
   display: inline-flex;
   align-items: center;
+  flex: 0 0 auto;
   gap: 8px;
+}
+
+.selected-share-target {
+  display: grid;
+  gap: 4px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-2);
+  padding: 10px 11px;
+}
+
+.selected-share-target > span {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+.share-picker-results {
+  display: grid;
+  max-height: 230px;
+  overflow: auto;
+  gap: 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  padding: 8px;
+}
+
+.share-picker-result {
+  display: grid;
+  width: 100%;
+  gap: 2px;
+  cursor: pointer;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: white;
+  color: var(--text);
+  padding: 10px 11px;
+  text-align: left;
+}
+
+.share-picker-result:hover,
+.share-picker-result:focus-visible {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(15, 122, 102, 0.1);
 }
 
 .tabs {
@@ -1327,8 +1373,15 @@ a {
   }
 
   .dashboard-page-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     width: 100%;
-    justify-content: flex-start;
+    justify-content: stretch;
+  }
+
+  .dashboard-page-actions .button {
+    width: 100%;
+    min-width: 0;
   }
 
   .layout-edit-bar {

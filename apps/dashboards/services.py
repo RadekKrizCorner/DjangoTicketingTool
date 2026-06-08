@@ -8,13 +8,12 @@ from django.db import transaction
 from django.utils import timezone
 
 from apps.common.errors import DomainError
-from apps.dashboards import policies, selectors
+from apps.dashboards import policies, selectors, validators
 from apps.dashboards.models import Dashboard, DashboardShare, DashboardWidget
 from apps.projects.models import Project
 
 GRID_COLUMNS = 12
 MAX_GRID_HEIGHT = 100
-WIDGET_CONFIG_KEYS = {"project_ids", "statuses", "priorities", "assignee_ids", "due_window"}
 
 
 def create_dashboard(*, actor: Any, name: str) -> Dashboard:
@@ -187,15 +186,7 @@ def ensure_dashboard_edit(*, actor: Any, dashboard: Dashboard) -> None:
 
 def validate_widget_config(*, config: dict) -> dict:
     """Return a validated widget config."""
-    if not isinstance(config, dict):
-        raise_validation_error(field="config", detail="Widget config must be an object.")
-    unsupported_keys = sorted(set(config) - WIDGET_CONFIG_KEYS)
-    if unsupported_keys:
-        raise_validation_error(
-            field="config",
-            detail=f"Unsupported widget config keys: {', '.join(unsupported_keys)}.",
-        )
-    return dict(config)
+    return validators.validate_task_filters(filters=config, field="config")
 
 
 def widget_layout(data: dict, widget_id: int | None = None) -> dict:

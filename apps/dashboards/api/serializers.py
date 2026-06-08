@@ -3,7 +3,7 @@
 from rest_framework import serializers
 
 from apps.accounts.api.serializers import UserSummarySerializer
-from apps.dashboards import policies
+from apps.dashboards import policies, validators
 from apps.dashboards.models import Dashboard, DashboardShare, DashboardWidget
 
 
@@ -192,6 +192,10 @@ class DashboardRenderInputSerializer(serializers.Serializer):
     """Validate dashboard render input."""
 
     filters = serializers.DictField(required=False, default=dict)
+
+    def validate_filters(self, value: dict) -> dict:
+        """Validate temporary dashboard filters."""
+        return validators.validate_task_filters(filters=value, field="filters")
 
 
 class DashboardRenderEnvelopeSerializer(serializers.Serializer):

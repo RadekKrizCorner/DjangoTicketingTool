@@ -490,4 +490,34 @@ describe('App', () => {
     await waitFor(() => expect(screen.queryByRole('dialog', { name: /share dashboard/i })).not.toBeInTheDocument())
     expect(screen.queryByText(/project members/i)).not.toBeInTheDocument()
   })
+
+  it('adds dashboard shares by selecting named projects and users', async () => {
+    const { user } = renderApp()
+
+    await screen.findByRole('heading', { name: /delivery dashboard/i })
+    await navigateTo(user, /^dashboards$/i)
+    await user.click(await screen.findByRole('button', { name: /^share$/i }))
+
+    const dialog = await screen.findByRole('dialog', { name: /share dashboard/i })
+    expect(within(dialog).queryByLabelText(/project id/i)).not.toBeInTheDocument()
+    expect(within(dialog).queryByLabelText(/user id/i)).not.toBeInTheDocument()
+
+    await within(dialog).findByRole('option', { name: /public feedback/i })
+    await user.selectOptions(within(dialog).getByLabelText(/project/i), '11')
+    expect(within(dialog).getByRole('button', { name: /add share/i })).toBeEnabled()
+    await user.selectOptions(within(dialog).getByLabelText(/access/i), 'editor')
+    await user.click(within(dialog).getByRole('button', { name: /add share/i }))
+
+    const publicShareRow = within(dialog).getByText(/editor access/i).closest('.detail-row')
+    expect(publicShareRow).toHaveTextContent(/public feedback/i)
+    expect(within(dialog).getByRole('button', { name: /add share/i })).toBeDisabled()
+
+    await user.selectOptions(within(dialog).getByLabelText(/target/i), 'user')
+    await user.type(within(dialog).getByLabelText(/search users/i), 'nina')
+    await user.click(await within(dialog).findByRole('button', { name: /select nina member/i }))
+    await user.click(within(dialog).getByRole('button', { name: /add share/i }))
+
+    expect(within(dialog).getByText(/nina member/i)).toBeInTheDocument()
+    expect(within(dialog).getByText(/nina.member@example.com/i)).toBeInTheDocument()
+  })
 })

@@ -516,3 +516,49 @@ def test_layout_allows_adjacent_widgets_and_persists_after_fetch(client):
     assert widgets[first_widget_id]["y"] == 2
     assert widgets[second_widget_id]["x"] == 4
     assert widgets[second_widget_id]["y"] == 2
+
+
+@pytest.mark.integration
+@pytest.mark.django_db
+def test_render_rejects_malformed_dashboard_filters(client):
+    """Verify dashboard render filters are validated before ORM use."""
+    owner = create_user(email="malformed-filter-owner@example.com")
+    dashboard_id = create_dashboard_response(client, user=owner).json()["data"]["id"]
+
+    response = json_request(
+        client,
+        "post",
+        f"/api/v1/dashboards/{dashboard_id}/render/",
+        {"filters": {"project_ids": "abc"}},
+        owner,
+    )
+
+    assert response.status_code == 400
+    assert response.json()["errors"][0]["field"] == "filters"
+
+
+@pytest.mark.integration
+@pytest.mark.django_db
+def test_widget_create_rejects_malformed_widget_config(client):
+    """Verify widget config filters are validated before persistence."""
+    owner = create_user(email="malformed-config-owner@example.com")
+    dashboard_id = create_dashboard_response(client, user=owner).json()["data"]["id"]
+
+    response = add_widget_response(
+        client,
+        user=owner,
+        dashboard_id=dashboard_id,
+        payload={
+            "type": "metric_tile",
+            "title": "Broken filter widget",
+            "config": {"statuses": ["not_real"]},
+            "x": 0,
+            "y": 0,
+            "w": 4,
+            "h": 2,
+            "order": 1,
+        },
+    )
+
+    assert response.status_code == 400
+    assert response.json()["errors"][0]["field"] == "config"
