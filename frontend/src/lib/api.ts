@@ -3,6 +3,17 @@ import {
   type AttachmentLimits,
   type AuditLog,
   type AuthSession,
+  type ConfigurableDashboard,
+  type DashboardAccess,
+  type DashboardDrilldown,
+  type DashboardLayoutItem,
+  type DashboardRender,
+  type DashboardRenderedWidget,
+  type DashboardShare,
+  type DashboardShareAccess,
+  type DashboardTaskFilters,
+  type DashboardWidget,
+  type DashboardWidgetType,
   type CurrentUser,
   type Envelope,
   type ID,
@@ -147,6 +158,8 @@ type DemoState = {
   attachments: Attachment[]
   notifications: Notification[]
   auditLogs: AuditLog[]
+  dashboards: ConfigurableDashboard[]
+  dashboardShares: DashboardShare[]
   nextId: number
 }
 
@@ -211,6 +224,8 @@ const demoState: DemoState = {
   attachments: [],
   notifications: [],
   auditLogs: [],
+  dashboards: [],
+  dashboardShares: [],
   nextId: 100,
 }
 
@@ -299,6 +314,30 @@ function seedDemoState() {
     audit(71, 1, 'membership.added', 'project_membership', 21, 10, {}, { role: 'manager' }, iso(-118)),
     audit(72, 1, 'task.created', 'task', 30, 10, {}, { title: 'Finalize deployment checklist' }, iso(-72)),
     audit(73, 2, 'task.transitioned', 'task', 30, 10, { status: 'accepted' }, { status: 'in_progress' }, iso(-4)),
+  ]
+  demoState.dashboardShares = [
+    dashboardShare(90, 80, 'project_members', null, 10, 'viewer'),
+    dashboardShare(91, 81, 'user', 2, null, 'editor'),
+    dashboardShare(92, 82, 'user', 1, null, 'viewer'),
+  ]
+  demoState.dashboards = [
+    dashboard(80, 1, 'Operations Dashboard', [
+      widget(83, 80, 'metric_tile', 'Open tickets', { project_ids: [10, 11], statuses: openTaskStatuses() }, 0, 0, 3, 2, 1),
+      widget(84, 80, 'metric_tile', 'Urgent tickets', { project_ids: [10, 11], priorities: ['urgent'] }, 3, 0, 3, 2, 2),
+      widget(85, 80, 'technician_workload', 'Technician workload', { project_ids: [10, 11], statuses: openTaskStatuses() }, 6, 0, 6, 4, 3),
+      widget(86, 80, 'due_soon_table', 'Due next 7 days', { project_ids: [10, 11], due_window: 'next_7_days' }, 0, 2, 6, 4, 4),
+    ]),
+    dashboard(81, 1, 'Support Triage', [
+      widget(87, 81, 'metric_tile', 'New intake', { project_ids: [10, 11], statuses: ['new', 'accepted'] }, 0, 0, 3, 2, 1),
+      widget(88, 81, 'status_breakdown', 'Status breakdown', { project_ids: [10, 11] }, 3, 0, 5, 3, 2),
+      widget(89, 81, 'priority_breakdown', 'Priority breakdown', { project_ids: [10, 11] }, 8, 0, 4, 3, 3),
+      widget(93, 81, 'recent_activity', 'Recent activity', { project_ids: [10, 11] }, 0, 3, 12, 3, 4),
+    ]),
+    dashboard(82, 2, 'My Team', [
+      widget(94, 82, 'metric_tile', 'My open tickets', { project_ids: [10, 11], assignee_ids: [2], statuses: openTaskStatuses() }, 0, 0, 3, 2, 1),
+      widget(95, 82, 'technician_workload', 'Team workload', { project_ids: [10, 11], statuses: openTaskStatuses() }, 3, 0, 5, 4, 2),
+      widget(96, 82, 'due_soon_table', 'Overdue tickets', { project_ids: [10, 11], due_window: 'overdue' }, 8, 0, 4, 4, 3),
+    ]),
   ]
 }
 
@@ -423,6 +462,76 @@ function audit(
   }
 }
 
+function openTaskStatuses(): TaskStatus[] {
+  return ['new', 'accepted', 'in_progress', 'on_hold']
+}
+
+function dashboard(id: ID, ownerId: ID, name: string, widgets: DashboardWidget[]): ConfigurableDashboard {
+  return {
+    id,
+    name,
+    owner_id: ownerId,
+    owner: userSummary(ownerId),
+    access: 'none',
+    capabilities: dashboardCapabilities('none'),
+    widgets,
+    shares: [],
+    created_at: iso(-48),
+    updated_at: iso(-1),
+  }
+}
+
+function widget(
+  id: ID,
+  dashboardId: ID,
+  type: DashboardWidgetType,
+  title: string,
+  config: DashboardTaskFilters,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  order: number,
+): DashboardWidget {
+  return {
+    id,
+    dashboard_id: dashboardId,
+    type,
+    title,
+    config,
+    x,
+    y,
+    w,
+    h,
+    order,
+    created_at: iso(-48),
+    updated_at: iso(-1),
+  }
+}
+
+function dashboardShare(
+  id: ID,
+  dashboardId: ID,
+  targetType: DashboardShare['target_type'],
+  userId: ID | null,
+  projectId: ID | null,
+  access: DashboardShareAccess,
+): DashboardShare {
+  const project = projectId ? demoState.projects.find((item) => item.id === projectId) : null
+  return {
+    id,
+    dashboard_id: dashboardId,
+    target_type: targetType,
+    user_id: userId,
+    user: userId ? userSummary(userId) : null,
+    project_id: projectId,
+    project: project ? { id: project.id, name: project.name } : null,
+    access,
+    created_at: iso(-36),
+    updated_at: iso(-1),
+  }
+}
+
 seedDemoState()
 
 function nextId() {
@@ -463,6 +572,53 @@ function decorateProject(project: Project): Project {
       can_upload_task_attachment: canWriteTask,
       can_upload_comment_attachment: canComment,
     },
+  }
+}
+
+function dashboardCapabilities(access: DashboardAccess) {
+  const canEdit = access === 'owner' || access === 'editor'
+  return {
+    can_view: access !== 'none',
+    can_edit: canEdit,
+    can_manage_shares: access === 'owner',
+    can_delete: access === 'owner',
+  }
+}
+
+function dashboardAccess(dashboardItem: ConfigurableDashboard): DashboardAccess {
+  if (dashboardItem.owner_id === demoState.currentUser.id) return 'owner'
+  const shares = dashboardSharesFor(dashboardItem.id)
+  let access: DashboardAccess = 'none'
+  for (const share of shares) {
+    if (!dashboardShareApplies(share)) continue
+    if (share.access === 'editor') access = 'editor'
+    if (share.access === 'viewer' && access === 'none') access = 'viewer'
+  }
+  return access
+}
+
+function dashboardShareApplies(share: DashboardShare) {
+  if (share.target_type === 'user') return share.user_id === demoState.currentUser.id
+  if (!share.project_id) return false
+  return demoState.memberships.some(
+    (membershipRow) =>
+      membershipRow.project_id === share.project_id && membershipRow.user_id === demoState.currentUser.id,
+  )
+}
+
+function dashboardSharesFor(dashboardId: ID) {
+  return demoState.dashboardShares.filter((share) => share.dashboard_id === dashboardId)
+}
+
+function decorateDashboard(dashboardItem: ConfigurableDashboard): ConfigurableDashboard {
+  const access = dashboardAccess(dashboardItem)
+  return {
+    ...dashboardItem,
+    owner: userSummary(dashboardItem.owner_id),
+    access,
+    capabilities: dashboardCapabilities(access),
+    widgets: [...dashboardItem.widgets].sort((first, second) => first.order - second.order || first.id - second.id),
+    shares: access === 'owner' ? dashboardSharesFor(dashboardItem.id) : [],
   }
 }
 
@@ -543,6 +699,119 @@ function delay<T>(value: T) {
   return new Promise<T>((resolve) => window.setTimeout(() => resolve(value), 80))
 }
 
+function applyDashboardTaskFilters(tasks: Task[], filters: DashboardTaskFilters) {
+  let rows = tasks
+  if (filters.project_ids?.length) {
+    rows = rows.filter((taskItem) => filters.project_ids?.includes(taskItem.project_id))
+  }
+  if (filters.statuses?.length) {
+    rows = rows.filter((taskItem) => filters.statuses?.includes(taskItem.status))
+  }
+  if (filters.priorities?.length) {
+    rows = rows.filter((taskItem) => filters.priorities?.includes(taskItem.priority))
+  }
+  if (filters.assignee_ids?.length) {
+    rows = rows.filter((taskItem) => filters.assignee_ids?.includes(taskItem.assignee_id))
+  }
+  if (filters.due_window) {
+    rows = applyDueWindow(rows, filters.due_window)
+  }
+  return rows
+}
+
+function applyDueWindow(tasks: Task[], dueWindow: DashboardTaskFilters['due_window']) {
+  const current = now.getTime()
+  const day = 24 * 60 * 60 * 1000
+  return tasks.filter((taskItem) => {
+    if (!taskItem.due_at || ['completed', 'cancelled'].includes(taskItem.status)) return false
+    const dueAt = new Date(taskItem.due_at).getTime()
+    if (dueWindow === 'overdue') return dueAt < current
+    if (dueWindow === 'next_24_hours') return dueAt >= current && dueAt <= current + day
+    if (dueWindow === 'next_7_days') return dueAt >= current && dueAt <= current + 7 * day
+    return true
+  })
+}
+
+function mergedDashboardFilters(config: DashboardTaskFilters, filters: DashboardTaskFilters) {
+  return Object.fromEntries(
+    Object.entries({ ...config, ...filters }).filter(([, value]) => {
+      if (Array.isArray(value)) return value.length > 0
+      return value !== undefined && value !== null
+    }),
+  ) as DashboardTaskFilters
+}
+
+function renderDashboardData(dashboardItem: ConfigurableDashboard, filters: DashboardTaskFilters): DashboardRender {
+  return {
+    dashboard_id: dashboardItem.id,
+    widgets: [...dashboardItem.widgets]
+      .sort((first, second) => first.order - second.order || first.id - second.id)
+      .map((dashboardWidget) => renderDashboardWidget(dashboardWidget, filters)),
+  }
+}
+
+function renderDashboardWidget(dashboardWidget: DashboardWidget, filters: DashboardTaskFilters): DashboardRenderedWidget {
+  const effectiveFilters = mergedDashboardFilters(dashboardWidget.config, filters)
+  const tasks = applyDashboardTaskFilters(demoState.tasks.map(decorateTask), effectiveFilters)
+  let result: Record<string, unknown>
+  let drilldown: DashboardDrilldown = { type: 'task_list', filters: effectiveFilters }
+
+  if (dashboardWidget.type === 'metric_tile') {
+    result = { value: tasks.length }
+  } else if (dashboardWidget.type === 'status_breakdown') {
+    result = { items: groupedDashboardCounts(tasks, 'status') }
+  } else if (dashboardWidget.type === 'priority_breakdown') {
+    result = { items: groupedDashboardCounts(tasks, 'priority') }
+  } else if (dashboardWidget.type === 'technician_workload') {
+    result = { rows: technicianDashboardRows(tasks) }
+  } else if (dashboardWidget.type === 'due_soon_table') {
+    result = { rows: tasks.sort((first, second) => String(first.due_at).localeCompare(String(second.due_at))).slice(0, 8) }
+  } else {
+    result = { items: demoState.auditLogs.filter((item) => effectiveFilters.project_ids?.includes(item.project_id ?? 0)).slice(0, 8) }
+    drilldown = { type: 'activity' }
+  }
+
+  return {
+    id: dashboardWidget.id,
+    type: dashboardWidget.type,
+    title: dashboardWidget.title,
+    config: dashboardWidget.config,
+    layout: {
+      x: dashboardWidget.x,
+      y: dashboardWidget.y,
+      w: dashboardWidget.w,
+      h: dashboardWidget.h,
+      order: dashboardWidget.order,
+    },
+    result,
+    drilldown,
+  }
+}
+
+function groupedDashboardCounts(tasks: Task[], field: 'status' | 'priority') {
+  const counts = new Map<string, number>()
+  for (const taskItem of tasks) {
+    counts.set(taskItem[field], (counts.get(taskItem[field]) ?? 0) + 1)
+  }
+  return Array.from(counts, ([value, count]) => ({ value, count })).sort((first, second) =>
+    first.value.localeCompare(second.value),
+  )
+}
+
+function technicianDashboardRows(tasks: Task[]) {
+  const rows = new Map<ID, { assignee: UserSummary; open_count: number; oldest_due_at: string | null }>()
+  for (const taskItem of tasks) {
+    const assignee = taskItem.assignee ?? userSummary(taskItem.assignee_id)
+    const current = rows.get(taskItem.assignee_id) ?? { assignee, open_count: 0, oldest_due_at: null }
+    current.open_count += 1
+    if (taskItem.due_at && (!current.oldest_due_at || taskItem.due_at < current.oldest_due_at)) {
+      current.oldest_due_at = taskItem.due_at
+    }
+    rows.set(taskItem.assignee_id, current)
+  }
+  return Array.from(rows.values()).sort((first, second) => second.open_count - first.open_count)
+}
+
 const liveApi = {
   login: (payload: { email: string; password: string }) =>
     request<Envelope<AuthSession>>('/users/token/', { method: 'POST', body: payload }).then((res) => res.data),
@@ -619,6 +888,31 @@ const liveApi = {
   },
   deleteAttachment: (attachmentId: ID) => request<void>(`/attachments/${attachmentId}/`, { method: 'DELETE' }),
   downloadUrl: (attachmentId: ID) => `${API_BASE}/attachments/${attachmentId}/download/`,
+  dashboards: () => request<Envelope<ConfigurableDashboard[]>>('/dashboards/').then((res) => res.data),
+  dashboard: (id: ID) => request<Envelope<ConfigurableDashboard>>(`/dashboards/${id}/`).then((res) => res.data),
+  createDashboard: (payload: { name: string }) =>
+    request<Envelope<ConfigurableDashboard>>('/dashboards/', { method: 'POST', body: payload }).then((res) => res.data),
+  updateDashboard: (id: ID, payload: { name?: string }) =>
+    request<Envelope<ConfigurableDashboard>>(`/dashboards/${id}/`, { method: 'PATCH', body: payload }).then((res) => res.data),
+  createDashboardWidget: (dashboardId: ID, payload: Partial<DashboardWidget> & { type: DashboardWidgetType; title: string }) =>
+    request<Envelope<DashboardWidget>>(`/dashboards/${dashboardId}/widgets/`, { method: 'POST', body: payload }).then((res) => res.data),
+  updateDashboardWidget: (dashboardId: ID, widgetId: ID, payload: Partial<DashboardWidget>) =>
+    request<Envelope<DashboardWidget>>(`/dashboards/${dashboardId}/widgets/${widgetId}/`, { method: 'PATCH', body: payload }).then((res) => res.data),
+  deleteDashboardWidget: (dashboardId: ID, widgetId: ID) => request<void>(`/dashboards/${dashboardId}/widgets/${widgetId}/`, { method: 'DELETE' }),
+  saveDashboardLayout: (dashboardId: ID, widgets: DashboardLayoutItem[]) =>
+    request<Envelope<{ widgets: DashboardWidget[] }>>(`/dashboards/${dashboardId}/layout/`, { method: 'PUT', body: { widgets } }).then((res) => res.data.widgets),
+  dashboardShares: (dashboardId: ID) => request<Envelope<DashboardShare[]>>(`/dashboards/${dashboardId}/shares/`).then((res) => res.data),
+  saveDashboardShares: (dashboardId: ID, shares: Partial<DashboardShare>[]) =>
+    request<Envelope<DashboardShare[]>>(`/dashboards/${dashboardId}/shares/`, { method: 'PUT', body: { shares } }).then((res) => res.data),
+  renderDashboard: (dashboardId: ID, filters: DashboardTaskFilters) =>
+    request<Envelope<DashboardRender>>(`/dashboards/${dashboardId}/render/`, { method: 'POST', body: { filters } }).then((res) => res.data),
+  dashboardTaskResults: async (filters: DashboardTaskFilters) => {
+    const projects = filters.project_ids?.length
+      ? filters.project_ids.map((id) => ({ id }))
+      : await liveApi.projects({})
+    const taskGroups = await Promise.all(projects.map((project) => liveApi.tasks(project.id)))
+    return applyDashboardTaskFilters(taskGroups.flat(), filters)
+  },
   notifications: () => request<Paginated<Notification>>('/notifications/').then((res) => res.data),
   readNotification: (id: ID) => request<Envelope<Notification>>(`/notifications/${id}/read/`, { method: 'POST' }).then((res) => res.data),
   readAllNotifications: () => request<Envelope<StatusResponse>>('/notifications/read-all/', { method: 'POST' }).then((res) => res.data),
@@ -807,6 +1101,79 @@ const demoApi = {
     return delay(undefined)
   },
   downloadUrl: (attachmentId: ID) => `${API_BASE}/attachments/${attachmentId}/download/`,
+  dashboards: async () => delay(demoState.dashboards.map(decorateDashboard).filter((item) => item.capabilities.can_view)),
+  dashboard: async (id: ID) => delay(decorateDashboard(demoState.dashboards.find((item) => item.id === id)!)),
+  createDashboard: async (payload: { name: string }) => {
+    const row = dashboard(nextId(), demoState.currentUser.id, payload.name, [])
+    demoState.dashboards.push(row)
+    return delay(decorateDashboard(row))
+  },
+  updateDashboard: async (id: ID, payload: { name?: string }) => {
+    const row = demoState.dashboards.find((item) => item.id === id)!
+    Object.assign(row, payload, { updated_at: new Date().toISOString() })
+    return delay(decorateDashboard(row))
+  },
+  createDashboardWidget: async (dashboardId: ID, payload: Partial<DashboardWidget> & { type: DashboardWidgetType; title: string }) => {
+    const dashboardRow = demoState.dashboards.find((item) => item.id === dashboardId)!
+    const row = widget(
+      nextId(),
+      dashboardId,
+      payload.type,
+      payload.title,
+      payload.config ?? {},
+      payload.x ?? 0,
+      payload.y ?? Math.max(0, ...dashboardRow.widgets.map((item) => item.y + item.h)),
+      payload.w ?? 3,
+      payload.h ?? 2,
+      payload.order ?? dashboardRow.widgets.length + 1,
+    )
+    dashboardRow.widgets.push(row)
+    dashboardRow.updated_at = new Date().toISOString()
+    return delay(row)
+  },
+  updateDashboardWidget: async (dashboardId: ID, widgetId: ID, payload: Partial<DashboardWidget>) => {
+    const dashboardRow = demoState.dashboards.find((item) => item.id === dashboardId)!
+    const row = dashboardRow.widgets.find((item) => item.id === widgetId)!
+    Object.assign(row, payload, { updated_at: new Date().toISOString() })
+    dashboardRow.updated_at = new Date().toISOString()
+    return delay(row)
+  },
+  deleteDashboardWidget: async (dashboardId: ID, widgetId: ID) => {
+    const dashboardRow = demoState.dashboards.find((item) => item.id === dashboardId)!
+    dashboardRow.widgets = dashboardRow.widgets.filter((item) => item.id !== widgetId)
+    dashboardRow.updated_at = new Date().toISOString()
+    return delay(undefined)
+  },
+  saveDashboardLayout: async (dashboardId: ID, widgets: DashboardLayoutItem[]) => {
+    const dashboardRow = demoState.dashboards.find((item) => item.id === dashboardId)!
+    for (const item of widgets) {
+      const row = dashboardRow.widgets.find((widgetRow) => widgetRow.id === item.id)
+      if (row) Object.assign(row, item, { updated_at: new Date().toISOString() })
+    }
+    dashboardRow.updated_at = new Date().toISOString()
+    return delay([...dashboardRow.widgets].sort((first, second) => first.order - second.order || first.id - second.id))
+  },
+  dashboardShares: async (dashboardId: ID) => delay(dashboardSharesFor(dashboardId)),
+  saveDashboardShares: async (dashboardId: ID, shares: Partial<DashboardShare>[]) => {
+    demoState.dashboardShares = demoState.dashboardShares.filter((share) => share.dashboard_id !== dashboardId)
+    const rows = shares.map((share) =>
+      dashboardShare(
+        nextId(),
+        dashboardId,
+        share.target_type ?? 'user',
+        share.user_id ?? null,
+        share.project_id ?? null,
+        share.access ?? 'viewer',
+      ),
+    )
+    demoState.dashboardShares.push(...rows)
+    return delay(rows)
+  },
+  renderDashboard: async (dashboardId: ID, filters: DashboardTaskFilters) => {
+    const dashboardRow = demoState.dashboards.find((item) => item.id === dashboardId)!
+    return delay(renderDashboardData(dashboardRow, filters))
+  },
+  dashboardTaskResults: async (filters: DashboardTaskFilters) => delay(applyDashboardTaskFilters(demoState.tasks.map(decorateTask), filters)),
   notifications: async () => delay(demoState.notifications),
   readNotification: async (id: ID) => {
     const row = demoState.notifications.find((item) => item.id === id)!

@@ -7,6 +7,7 @@ from django.contrib.auth import get_user_model
 from django.core.management import CommandError, call_command
 
 from apps.attachments.models import Attachment
+from apps.dashboards.models import Dashboard, DashboardShare, DashboardWidget
 from apps.notifications.models import Notification
 from apps.projects.models import Project, ProjectMembership
 from apps.tasks.models import Task, TaskComment
@@ -39,6 +40,9 @@ def test_seed_demo_data_creates_idempotent_demo_dataset():
         "tasks": Task.objects.count(),
         "comments": TaskComment.objects.count(),
         "attachments": Attachment.objects.count(),
+        "dashboards": Dashboard.objects.count(),
+        "dashboard_widgets": DashboardWidget.objects.count(),
+        "dashboard_shares": DashboardShare.objects.count(),
         "notifications": Notification.objects.count(),
         "demo_notifications": Notification.objects.filter(type="demo_welcome").count(),
     }
@@ -50,6 +54,9 @@ def test_seed_demo_data_creates_idempotent_demo_dataset():
         "tasks": Task.objects.count(),
         "comments": TaskComment.objects.count(),
         "attachments": Attachment.objects.count(),
+        "dashboards": Dashboard.objects.count(),
+        "dashboard_widgets": DashboardWidget.objects.count(),
+        "dashboard_shares": DashboardShare.objects.count(),
         "notifications": Notification.objects.count(),
         "demo_notifications": Notification.objects.filter(type="demo_welcome").count(),
     }
@@ -68,6 +75,9 @@ def test_seed_demo_data_creates_idempotent_demo_dataset():
             "tasks",
             "comments",
             "attachments",
+            "dashboards",
+            "dashboard_widgets",
+            "dashboard_shares",
             "demo_notifications",
         )
     } == {
@@ -77,8 +87,20 @@ def test_seed_demo_data_creates_idempotent_demo_dataset():
         "tasks": 4,
         "comments": 4,
         "attachments": 4,
+        "dashboards": 3,
+        "dashboard_widgets": 11,
+        "dashboard_shares": 3,
         "demo_notifications": 3,
     }
+    assert set(Dashboard.objects.values_list("name", flat=True)) == {
+        "My Team",
+        "Operations Dashboard",
+        "Support Triage",
+    }
+    assert DashboardShare.objects.filter(target_type=DashboardShare.TargetType.USER).exists()
+    assert DashboardShare.objects.filter(
+        target_type=DashboardShare.TargetType.PROJECT_MEMBERS,
+    ).exists()
     assert second_counts == first_counts
     assert "Seeded demo data" in first_output
     assert "Seeded demo data" in second_output

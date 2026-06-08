@@ -23,6 +23,7 @@ nav:
   - Architecture: architecture.md
   - Security: security.md
   - Attachments: attachments.md
+  - Dashboards: dashboards.md
   - API:
       - Overview: api/overview.md
       - Endpoints: api/endpoints.md

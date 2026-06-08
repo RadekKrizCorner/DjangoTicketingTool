@@ -33,6 +33,7 @@ INSTALLED_APPS = [
     "apps.attachments",
     "apps.audit",
     "apps.common",
+    "apps.dashboards",
     "apps.health",
     "apps.notifications",
     "apps.observability",

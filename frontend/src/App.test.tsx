@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { cleanup, render, screen, waitFor, within } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
@@ -333,5 +333,161 @@ describe('App', () => {
     await user.selectOptions(timezone, 'UTC')
     expect(timezone).toHaveValue('UTC')
     expect(screen.getByRole('option', { name: /europe\/prague/i })).toBeInTheDocument()
+  })
+
+  it('opens dashboards from top-level navigation and renders demo widgets', async () => {
+    const { user } = renderApp()
+
+    await screen.findByRole('heading', { name: /delivery dashboard/i })
+    await navigateTo(user, /^dashboards$/i)
+
+    expect(await screen.findByRole('heading', { name: /^dashboards$/i })).toBeInTheDocument()
+    await user.click(await screen.findByRole('button', { name: /open dashboard menu/i }))
+    expect(await screen.findByText(/favorites/i)).toBeInTheDocument()
+    expect(screen.getByLabelText(/search dashboards/i)).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: /select operations dashboard/i })).toHaveAttribute('aria-current', 'page')
+    await user.type(screen.getByLabelText(/search dashboards/i), 'support')
+    expect(await screen.findByRole('button', { name: /select support triage/i })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /select my team/i })).not.toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: /open tickets/i })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /technician workload/i })).toBeInTheDocument()
+    expect(screen.getByText(/project members/i)).toBeInTheDocument()
+  })
+
+  it('blocks overlapping dashboard layout edits', async () => {
+    const { user } = renderApp()
+
+    await screen.findByRole('heading', { name: /delivery dashboard/i })
+    await navigateTo(user, /^dashboards$/i)
+    await screen.findByRole('heading', { name: /open tickets/i })
+    await user.click(await screen.findByRole('button', { name: /edit layout/i }))
+
+    const openTickets = await screen.findByTestId('dashboard-widget-open-tickets')
+    expect(openTickets).toHaveStyle({ gridColumn: '1 / span 3' })
+    await user.click(await screen.findByRole('button', { name: /move open tickets right/i }))
+
+    expect(openTickets).toHaveStyle({ gridColumn: '1 / span 3' })
+    expect(await screen.findByText(/widgets cannot overlap/i)).toBeInTheDocument()
+  })
+
+  it('blocks overlapping pointer drag and resize edits', async () => {
+    const { user } = renderApp()
+
+    await screen.findByRole('heading', { name: /delivery dashboard/i })
+    await navigateTo(user, /^dashboards$/i)
+    await screen.findByRole('heading', { name: /open tickets/i })
+    await user.click(await screen.findByRole('button', { name: /edit layout/i }))
+
+    const openTickets = await screen.findByTestId('dashboard-widget-open-tickets')
+    const grid = openTickets.closest('.dashboard-grid')
+    expect(grid).toBeTruthy()
+    Object.defineProperty(grid, 'clientWidth', { configurable: true, value: 1200 })
+
+    const widgetHeader = within(openTickets).getByRole('heading', { name: /open tickets/i }).closest('.dashboard-widget-header')
+    expect(widgetHeader).toBeTruthy()
+    fireEvent.pointerDown(widgetHeader as HTMLElement, { clientX: 0, clientY: 0 })
+    fireEvent.pointerMove(window, { clientX: 100, clientY: 0 })
+    fireEvent.pointerUp(window)
+
+    expect(openTickets).toHaveStyle({ gridColumn: '1 / span 3' })
+    expect(await screen.findByText(/widgets cannot overlap/i)).toBeInTheDocument()
+
+    fireEvent.pointerDown(await screen.findByRole('button', { name: /drag resize open tickets/i }), { clientX: 0, clientY: 0 })
+    fireEvent.pointerMove(window, { clientX: 100, clientY: 0 })
+    fireEvent.pointerUp(window)
+
+    expect(openTickets).toHaveStyle({ gridColumn: '1 / span 3' })
+  })
+
+  it('saves a valid dashboard layout and restores it after switching dashboards', async () => {
+    const { user } = renderApp()
+
+    await screen.findByRole('heading', { name: /delivery dashboard/i })
+    await navigateTo(user, /^dashboards$/i)
+    await user.click(await screen.findByRole('button', { name: /new dashboard/i }))
+
+    const dialog = await screen.findByRole('dialog', { name: /create dashboard/i })
+    const nameInput = within(dialog).getByLabelText(/name/i)
+    await user.clear(nameInput)
+    await user.type(nameInput, 'Layout Persistence')
+    await user.click(within(dialog).getByRole('button', { name: /create dashboard/i }))
+
+    expect(await screen.findByRole('heading', { name: /layout persistence/i })).toBeInTheDocument()
+    await user.click(await screen.findByRole('button', { name: /add widget/i }))
+    await user.click(within(await screen.findByRole('dialog', { name: /add widget/i })).getByRole('button', { name: /add widget/i }))
+
+    const widget = await screen.findByTestId('dashboard-widget-new-metric')
+    expect(widget).toHaveStyle({ gridColumn: '1 / span 4' })
+    await user.click(await screen.findByRole('button', { name: /edit layout/i }))
+    await user.click(await screen.findByRole('button', { name: /move new metric right/i }))
+    expect(widget).toHaveStyle({ gridColumn: '2 / span 4' })
+    await user.click(await screen.findByRole('button', { name: /save layout/i }))
+    expect(await screen.findByText(/layout saved/i)).toBeInTheDocument()
+
+    await user.click(await screen.findByRole('button', { name: /open dashboard menu/i }))
+    await user.click(await screen.findByRole('button', { name: /select operations dashboard/i }))
+    await user.click(await screen.findByRole('button', { name: /open dashboard menu/i }))
+    await user.type(screen.getByLabelText(/search dashboards/i), 'layout persistence')
+    await user.click(await screen.findByRole('button', { name: /select layout persistence/i }))
+
+    expect(await screen.findByTestId('dashboard-widget-new-metric')).toHaveStyle({ gridColumn: '2 / span 4' })
+  })
+
+  it('shows owner-only sharing controls', async () => {
+    const { user } = renderApp()
+
+    await screen.findByRole('heading', { name: /delivery dashboard/i })
+    await navigateTo(user, /^dashboards$/i)
+
+    expect(await screen.findByRole('button', { name: /^share$/i })).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: /open dashboard menu/i }))
+    await user.click(await screen.findByRole('button', { name: /select my team/i }))
+
+    expect(await screen.findByText(/viewer access/i)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /^share$/i })).not.toBeInTheDocument()
+  })
+
+  it('navigates from widget drilldown to a filtered task list', async () => {
+    const { user } = renderApp()
+
+    await screen.findByRole('heading', { name: /delivery dashboard/i })
+    await navigateTo(user, /^dashboards$/i)
+    await user.click(await screen.findByRole('button', { name: /open matching tasks for open tickets/i }))
+
+    expect(await screen.findByRole('heading', { name: /dashboard task results/i, level: 1 })).toBeInTheDocument()
+    expect(screen.getByText(/filtered by dashboard widget/i)).toBeInTheDocument()
+    expect(window.location.pathname).toBe('/ui/dashboard-tasks')
+  })
+
+  it('creates a dashboard from the dashboards workspace', async () => {
+    const { user } = renderApp()
+
+    await screen.findByRole('heading', { name: /delivery dashboard/i })
+    await navigateTo(user, /^dashboards$/i)
+    await user.click(await screen.findByRole('button', { name: /new dashboard/i }))
+
+    const dialog = await screen.findByRole('dialog', { name: /create dashboard/i })
+    const nameInput = within(dialog).getByLabelText(/name/i)
+    await user.clear(nameInput)
+    await user.type(nameInput, 'Release Metrics')
+    await user.click(within(dialog).getByRole('button', { name: /create dashboard/i }))
+
+    expect(await screen.findByRole('heading', { name: /release metrics/i })).toBeInTheDocument()
+  })
+
+  it('removes dashboard share rows before saving sharing changes', async () => {
+    const { user } = renderApp()
+
+    await screen.findByRole('heading', { name: /delivery dashboard/i })
+    await navigateTo(user, /^dashboards$/i)
+    await user.click(await screen.findByRole('button', { name: /^share$/i }))
+
+    const dialog = await screen.findByRole('dialog', { name: /share dashboard/i })
+    expect(within(dialog).getAllByText(/project members/i).length).toBeGreaterThan(1)
+    await user.click(within(dialog).getByRole('button', { name: /remove share 1/i }))
+    await user.click(within(dialog).getByRole('button', { name: /save sharing/i }))
+
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: /share dashboard/i })).not.toBeInTheDocument())
+    expect(screen.queryByText(/project members/i)).not.toBeInTheDocument()
   })
 })

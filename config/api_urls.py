@@ -8,6 +8,7 @@ from rest_framework.permissions import AllowAny
 
 import apps.accounts.api.urls as accounts_api_urls
 import apps.attachments.api.urls as attachments_api_urls
+import apps.dashboards.api.urls as dashboards_api_urls
 import apps.health.api.urls as health_api_urls
 import apps.notifications.api.urls as notifications_api_urls
 import apps.projects.api.urls as projects_api_urls
@@ -33,6 +34,7 @@ urlpatterns: list[URLPattern | URLResolver] = [
         name="redoc",
     ),
     path("attachments/", include(attachments_api_urls)),
+    path("dashboards/", include(dashboards_api_urls)),
     path("health/", include(health_api_urls)),
     path("notifications/", include(notifications_api_urls)),
     path("projects/", include(projects_api_urls)),

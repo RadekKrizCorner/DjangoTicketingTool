@@ -4,7 +4,8 @@ This documentation defines the product specification for a senior-level Django,
 Django REST Framework, and Celery backend.
 
 The application manages projects, project members, tasks, comments, attachments,
-notifications, scheduled publishing, scheduled closing, and audit logs.
+notifications, configurable dashboards, scheduled publishing, scheduled closing,
+and audit logs.
 
 
 ## Main Decisions
@@ -25,3 +26,5 @@ notifications, scheduled publishing, scheduled closing, and audit logs.
 Start with the [Product Specification](product-specification.md), then review
 [Architecture](architecture.md), [API Overview](api/overview.md), and the decision
 documents.
+Review [Configurable Dashboards](dashboards.md) for the shared dashboard builder,
+widget catalog, grid layout, and permission model.

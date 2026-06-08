@@ -5,7 +5,7 @@
 Build a backend for a project management application with user accounts, project
 membership, role-based permissions, tasks, task comments, attachments, notifications,
 scheduled project publishing, scheduled project closing, deadline reminders, audit
-logging, and deployment-ready documentation.
+logging, configurable dashboards, and deployment-ready documentation.
 
 The API must be usable by a frontend or mobile client. It must use correct HTTP
 status codes, consistent response structures, predictable error shapes, and strong
@@ -19,6 +19,7 @@ test coverage focused on application logic.
 - Support ownership transfer.
 - Support tasks with an explicit workflow.
 - Support task comments and attachments.
+- Support configurable shared dashboards with predefined widgets.
 - Support scheduled background operations through Celery.
 - Keep all domain data audit-friendly through soft delete and audit logs.
 - Provide public OpenAPI schema and docs without exposing application data to anonymous users.
@@ -27,7 +28,7 @@ test coverage focused on application logic.
 
 ## Non-Goals
 
-- No frontend application.
+- No arbitrary SQL, custom query language, or fully open BI builder in version 1.
 - No anonymous access to project, task, comment, user, or membership data.
 - No email verification before first login.
 - No full SSO implementation in version 1.
@@ -267,6 +268,46 @@ Rules:
 - Attachment records are soft-deleted.
 - Files are retained for audit.
 - Uploads are quota checked before saving.
+
+## Configurable Dashboards
+
+Users can create configurable dashboards from predefined widgets and share them
+when useful. Dashboards are personal by default, but owners can grant access to
+specific users or to all active members of a project.
+
+Dashboard access:
+
+| Access | Permissions |
+| --- | --- |
+| `owner` | Full control, including sharing and delete. |
+| `editor` | Can edit dashboard details, widgets, widget filters, and layout. |
+| `viewer` | Can view rendered data and apply temporary filters only. |
+
+Supported share targets:
+
+- `user`: one active user.
+- `project_members`: active members of a project, evaluated dynamically.
+
+Supported widgets:
+
+- Metric tile.
+- Status breakdown.
+- Priority breakdown.
+- Technician workload.
+- Due soon or overdue task table.
+- Recent activity.
+
+Rules:
+
+- Only the dashboard owner can manage sharing.
+- Editors can persist widget and layout changes, but cannot share or delete.
+- Viewers can use temporary dashboard-level filters without saving changes.
+- Widget rendering must always be scoped by the viewer's project visibility.
+- Widget configs support whitelisted task filters only.
+- Layout is stored as a bounded 12-column grid with `x`, `y`, `w`, `h`, and `order`.
+- Layout saves reject overlapping widgets and widgets outside the grid.
+- Widget drill-downs return structured navigation payloads for task lists,
+  task details, project details, or activity.
 
 ## Notifications And Emails
 

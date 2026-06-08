@@ -195,6 +195,32 @@ notifications and email delivery rows for task updates, task transitions, task
 deletion, and comment create/update/delete events. The actor who made the
 change is excluded from watcher notifications.
 
+## Dashboards
+
+```text
+GET    /api/v1/dashboards/
+POST   /api/v1/dashboards/
+GET    /api/v1/dashboards/{dashboard_id}/
+PATCH  /api/v1/dashboards/{dashboard_id}/
+DELETE /api/v1/dashboards/{dashboard_id}/
+GET    /api/v1/dashboards/{dashboard_id}/widgets/
+POST   /api/v1/dashboards/{dashboard_id}/widgets/
+PATCH  /api/v1/dashboards/{dashboard_id}/widgets/{widget_id}/
+DELETE /api/v1/dashboards/{dashboard_id}/widgets/{widget_id}/
+PUT    /api/v1/dashboards/{dashboard_id}/layout/
+GET    /api/v1/dashboards/{dashboard_id}/shares/
+PUT    /api/v1/dashboards/{dashboard_id}/shares/
+POST   /api/v1/dashboards/{dashboard_id}/render/
+```
+
+Implemented in PROJECT-027. Dashboards support predefined widgets, temporary
+render filters, owner/editor/viewer access, owner-only sharing, user share
+targets, and dynamic project-member share targets. Widget rendering is always
+scoped through the viewer's project visibility before widget filters are applied.
+
+Widget layout uses a 12-column bounded grid. Layout saves reject widgets outside
+the grid and reject overlapping widgets.
+
 ## Attachments
 
 ```text
