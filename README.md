@@ -84,7 +84,7 @@ operations.
 - Project memberships and role-based access boundaries.
 - Project, task, comment, attachment, audit log, and notification workflows.
 - File upload quotas and attachment handling.
-- Routed React workspace UI for dashboard, projects, tasks, notifications, and profile flows.
+- Routed React workspace UI for configurable dashboards, projects, tasks, notifications, and profile flows.
 - Celery worker and beat scheduling backed by Redis.
 - PostgreSQL persistence with Django migrations.
 - OpenAPI documentation generated from the API surface.
@@ -156,7 +156,8 @@ display name: Demo Admin
 ```
 
 It also creates demo users, projects, memberships, tasks, comments, text
-attachments, and notifications. Override the credentials with
+attachments, notifications, and seeded dashboards named `Operations Dashboard`,
+`Support Triage`, and `My Team`. Override the credentials with
 `DEMO_SUPERUSER_EMAIL`, `DEMO_SUPERUSER_PASSWORD`,
 `DEMO_SUPERUSER_DISPLAY_NAME`, and `DEMO_USER_PASSWORD`.
 
@@ -178,6 +179,7 @@ Key documentation:
 
 - [API Overview](docs/api/overview.md)
 - [API Endpoints](docs/api/endpoints.md)
+- [Configurable Dashboards](docs/dashboards.md)
 - [Architecture](docs/architecture.md)
 - [Security](docs/security.md)
 - [Testing Strategy](docs/testing/strategy.md)

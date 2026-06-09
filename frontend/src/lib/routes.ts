@@ -5,6 +5,7 @@ export type ProjectTab = 'tasks' | 'members' | 'lifecycle' | 'audit' | 'attachme
 
 export type AppRoute = {
   view: ViewKey
+  dashboardId: ID | null
   projectId: ID | null
   taskId: ID | null
   projectTab: ProjectTab
@@ -12,6 +13,7 @@ export type AppRoute = {
 
 const defaultRoute: AppRoute = {
   view: 'dashboard',
+  dashboardId: null,
   projectId: null,
   taskId: null,
   projectTab: 'tasks',
@@ -19,6 +21,8 @@ const defaultRoute: AppRoute = {
 
 const viewPaths: Record<ViewKey, string> = {
   dashboard: '/',
+  dashboards: '/dashboards',
+  'dashboard-tasks': '/dashboard-tasks',
   projects: '/projects',
   'my-tasks': '/my-tasks',
   'due-soon': '/due-soon',
@@ -45,14 +49,17 @@ export function routeFromPath(pathname: string): AppRoute {
   const parts = path.split('/').filter(Boolean)
 
   if (parts.length === 0) return defaultRoute
+  if (parts[0] === 'dashboards') {
+    return { ...defaultRoute, view: 'dashboards', dashboardId: parseId(parts[1]) }
+  }
   if (parts[0] === 'projects') {
     const projectId = parseId(parts[1])
     if (!projectId) return { ...defaultRoute, view: 'projects' }
     if (parts[2] === 'tasks') {
-      return { view: 'projects', projectId, taskId: parseId(parts[3]), projectTab: 'tasks' }
+      return { view: 'projects', dashboardId: null, projectId, taskId: parseId(parts[3]), projectTab: 'tasks' }
     }
     const tab = validProjectTabs.has(parts[2] as ProjectTab) ? (parts[2] as ProjectTab) : 'tasks'
-    return { view: 'projects', projectId, taskId: null, projectTab: tab }
+    return { view: 'projects', dashboardId: null, projectId, taskId: null, projectTab: tab }
   }
 
   const view = Object.entries(viewPaths).find(([, viewPath]) => viewPath === path)?.[0] as ViewKey | undefined
@@ -70,6 +77,8 @@ export function pathForRoute(route: AppRoute): string {
     } else {
       path = `/projects/${route.projectId}`
     }
+  } else if (route.view === 'dashboards' && route.dashboardId) {
+    path = `/dashboards/${route.dashboardId}`
   }
   return `/ui${path === '/' ? '/' : path}`
 }

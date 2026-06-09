@@ -8,6 +8,10 @@ import { ConfirmButton, Dialog, IconButton, Input } from '../components/ui'
 import { useModalFocus } from '../components/useModalFocus'
 import { navItems, type ViewKey } from './navigation-model'
 
+const secondaryViewLabels: Partial<Record<ViewKey, string>> = {
+  'dashboard-tasks': 'Dashboard Task Results',
+}
+
 export function SideRail({ view, onOpen, onView }: { view: ViewKey; onOpen: () => void; onView: (view: ViewKey) => void }) {
   return (
     <aside className="sidebar-rail" aria-label="Primary navigation">
@@ -114,7 +118,7 @@ export function Topbar({
   const [searchOpen, setSearchOpen] = useState(false)
   const notificationsQuery = useQuery({ queryKey: ['notifications'], queryFn: api.notifications })
   const unread = notificationsQuery.data?.filter((item) => !item.read_at).length ?? 0
-  const currentLabel = navItems.find((item) => item.key === view)?.label ?? 'Dashboard'
+  const currentLabel = navItems.find((item) => item.key === view)?.label ?? secondaryViewLabels[view] ?? 'Dashboard'
   const unreadLabel = unread === 1 ? '1 unread' : `${unread} unread`
   const unreadBadge = unread > 99 ? '99+' : String(unread)
 

@@ -7,11 +7,13 @@ import { PageHeading } from './layout'
 
 export function TaskListPage({
   title,
+  detail = 'Direct task endpoints for assigned and due-soon work.',
   queryKey,
   queryFn,
   onOpenTask,
 }: {
   title: string
+  detail?: string
   queryKey: unknown[]
   queryFn: () => Promise<Task[]>
   onOpenTask: (projectId: ID, taskId: ID) => void
@@ -19,7 +21,7 @@ export function TaskListPage({
   const tasksQuery = useQuery({ queryKey, queryFn })
   return (
     <>
-      <PageHeading title={title} detail="Direct task endpoints for assigned and due-soon work." />
+      <PageHeading title={title} detail={detail} />
       <Panel title={title}>
         <TaskTable tasks={tasksQuery.data ?? []} onOpenTask={onOpenTask} />
       </Panel>

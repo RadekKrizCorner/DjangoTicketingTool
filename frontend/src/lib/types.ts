@@ -230,3 +230,103 @@ export type StatusResponse = {
   status: string
   count?: number
 }
+
+export type DashboardAccess = 'owner' | 'editor' | 'viewer' | 'none'
+
+export type DashboardWidgetType =
+  | 'metric_tile'
+  | 'status_breakdown'
+  | 'priority_breakdown'
+  | 'technician_workload'
+  | 'due_soon_table'
+  | 'recent_activity'
+
+export type DashboardShareTargetType = 'user' | 'project_members'
+export type DashboardShareAccess = 'viewer' | 'editor'
+export type DashboardDueWindow = 'overdue' | 'next_24_hours' | 'next_7_days'
+
+export type DashboardTaskFilters = {
+  project_ids?: ID[]
+  statuses?: TaskStatus[]
+  priorities?: TaskPriority[]
+  assignee_ids?: ID[]
+  due_window?: DashboardDueWindow
+}
+
+export type DashboardWidget = {
+  id: ID
+  dashboard_id: ID
+  type: DashboardWidgetType
+  title: string
+  config: DashboardTaskFilters
+  x: number
+  y: number
+  w: number
+  h: number
+  order: number
+  created_at: string
+  updated_at: string
+}
+
+export type DashboardShare = {
+  id: ID
+  dashboard_id: ID
+  target_type: DashboardShareTargetType
+  user_id: ID | null
+  user?: UserSummary | null
+  project_id: ID | null
+  project?: { id: ID; name: string } | null
+  access: DashboardShareAccess
+  created_at: string
+  updated_at: string
+}
+
+export type DashboardCapabilities = {
+  can_view: boolean
+  can_edit: boolean
+  can_manage_shares: boolean
+  can_delete: boolean
+}
+
+export type ConfigurableDashboard = {
+  id: ID
+  name: string
+  owner_id: ID
+  owner?: UserSummary
+  access: DashboardAccess
+  capabilities: DashboardCapabilities
+  widgets: DashboardWidget[]
+  shares: DashboardShare[]
+  created_at: string
+  updated_at: string
+}
+
+export type DashboardLayoutItem = {
+  id: ID
+  x: number
+  y: number
+  w: number
+  h: number
+  order: number
+}
+
+export type DashboardDrilldown =
+  | { type: 'task_list'; filters: DashboardTaskFilters }
+  | { type: 'task_detail'; project_id: ID; task_id: ID }
+  | { type: 'project_detail'; project_id: ID }
+  | { type: 'activity' }
+
+export type DashboardRenderedWidget = {
+  id: ID
+  type: DashboardWidgetType
+  title: string
+  config: DashboardTaskFilters
+  layout: Omit<DashboardLayoutItem, 'id'>
+  result: Record<string, unknown>
+  drilldown: DashboardDrilldown
+}
+
+export type DashboardRender = {
+  dashboard_id: ID
+  widgets: DashboardRenderedWidget[]
+}

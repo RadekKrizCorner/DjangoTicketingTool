@@ -30,4 +30,5 @@ venv/
 
 # AI tools
 docs/superpowers/
+.superpowers/
 .oca/*

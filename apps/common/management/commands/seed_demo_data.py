@@ -14,6 +14,7 @@ from django.utils import timezone
 
 from apps.attachments.models import Attachment
 from apps.attachments.services import create_attachment
+from apps.dashboards.models import Dashboard, DashboardShare, DashboardWidget
 from apps.notifications.services import create_notification
 from apps.projects.models import Project, ProjectMembership
 from apps.projects.services import add_project_member, create_project
@@ -111,13 +112,15 @@ class Command(BaseCommand):
                 options=seed_options,
                 randomizer=randomizer,
             )
+            dashboards = ensure_dashboards(actor=superuser, users=users, projects=projects)
             ensure_notifications(users=users)
 
         self.stdout.write(
             self.style.SUCCESS(
                 "Seeded demo data: "
                 f"superuser={seed_options.superuser_email}, "
-                f"users={len(users)}, projects={len(projects)}, tasks={len(tasks)}"
+                f"users={len(users)}, projects={len(projects)}, tasks={len(tasks)}, "
+                f"dashboards={len(dashboards)}"
             )
         )
 
@@ -307,6 +310,292 @@ def ensure_notifications(*, users: list) -> None:
             message="Your demo account has seeded projects, tasks, comments, and notifications.",
             dedupe_key=f"demo:user:{user.email}:welcome",
         )
+
+
+def ensure_dashboards(*, actor, users: list, projects: list[Project]) -> list[Dashboard]:
+    """Create deterministic demo dashboards, widgets, and shares."""
+    team_owner = users[0]
+    team_viewer = users[1] if len(users) > 1 else actor
+    dashboards = [
+        ensure_dashboard(
+            owner=actor,
+            name="Operations Dashboard",
+            widgets=operations_dashboard_widgets(projects=projects),
+            shares=[
+                {
+                    "target_type": DashboardShare.TargetType.PROJECT_MEMBERS,
+                    "project": projects[0],
+                    "access": DashboardShare.Access.VIEWER,
+                }
+            ],
+        ),
+        ensure_dashboard(
+            owner=actor,
+            name="Support Triage",
+            widgets=support_triage_widgets(projects=projects),
+            shares=[
+                {
+                    "target_type": DashboardShare.TargetType.USER,
+                    "user": team_owner,
+                    "access": DashboardShare.Access.EDITOR,
+                }
+            ],
+        ),
+        ensure_dashboard(
+            owner=team_owner,
+            name="My Team",
+            widgets=my_team_widgets(projects=projects, users=users),
+            shares=[
+                {
+                    "target_type": DashboardShare.TargetType.USER,
+                    "user": team_viewer,
+                    "access": DashboardShare.Access.VIEWER,
+                }
+            ],
+        ),
+    ]
+    return dashboards
+
+
+def ensure_dashboard(
+    *,
+    owner,
+    name: str,
+    widgets: list[dict],
+    shares: list[dict],
+) -> Dashboard:
+    """Create or update one deterministic demo dashboard."""
+    dashboard = active_dashboard_by_owner_and_name(owner=owner, name=name)
+    if dashboard is None:
+        dashboard = Dashboard.objects.create(
+            name=name,
+            owner=owner,
+            created_by=owner,
+            updated_by=owner,
+        )
+    else:
+        dashboard.name = name
+        dashboard.owner = owner
+        dashboard.updated_by = owner
+        dashboard.save(update_fields=["name", "owner", "updated_by", "updated_at"])
+
+    for widget in widgets:
+        ensure_dashboard_widget(dashboard=dashboard, actor=owner, spec=widget)
+    for share in shares:
+        ensure_dashboard_share(dashboard=dashboard, actor=owner, spec=share)
+    return dashboard
+
+
+def operations_dashboard_widgets(*, projects: list[Project]) -> list[dict]:
+    """Return widget specs for the operations demo dashboard."""
+    project_ids = [project.id for project in projects]
+    return [
+        {
+            "title": "Open tickets",
+            "type": DashboardWidget.Type.METRIC_TILE,
+            "config": {"project_ids": project_ids, "statuses": open_task_statuses()},
+            "x": 0,
+            "y": 0,
+            "w": 3,
+            "h": 2,
+            "order": 1,
+        },
+        {
+            "title": "Urgent tickets",
+            "type": DashboardWidget.Type.METRIC_TILE,
+            "config": {"project_ids": project_ids, "priorities": [Task.Priority.URGENT]},
+            "x": 3,
+            "y": 0,
+            "w": 3,
+            "h": 2,
+            "order": 2,
+        },
+        {
+            "title": "Technician workload",
+            "type": DashboardWidget.Type.TECHNICIAN_WORKLOAD,
+            "config": {"project_ids": project_ids, "statuses": open_task_statuses()},
+            "x": 6,
+            "y": 0,
+            "w": 6,
+            "h": 4,
+            "order": 3,
+        },
+        {
+            "title": "Due next 7 days",
+            "type": DashboardWidget.Type.DUE_SOON_TABLE,
+            "config": {"project_ids": project_ids, "due_window": "next_7_days"},
+            "x": 0,
+            "y": 2,
+            "w": 6,
+            "h": 4,
+            "order": 4,
+        },
+    ]
+
+
+def support_triage_widgets(*, projects: list[Project]) -> list[dict]:
+    """Return widget specs for the support triage demo dashboard."""
+    project_ids = [project.id for project in projects]
+    return [
+        {
+            "title": "New intake",
+            "type": DashboardWidget.Type.METRIC_TILE,
+            "config": {
+                "project_ids": project_ids,
+                "statuses": [Task.Status.NEW, Task.Status.ACCEPTED],
+            },
+            "x": 0,
+            "y": 0,
+            "w": 3,
+            "h": 2,
+            "order": 1,
+        },
+        {
+            "title": "Status breakdown",
+            "type": DashboardWidget.Type.STATUS_BREAKDOWN,
+            "config": {"project_ids": project_ids},
+            "x": 3,
+            "y": 0,
+            "w": 5,
+            "h": 3,
+            "order": 2,
+        },
+        {
+            "title": "Priority breakdown",
+            "type": DashboardWidget.Type.PRIORITY_BREAKDOWN,
+            "config": {"project_ids": project_ids},
+            "x": 8,
+            "y": 0,
+            "w": 4,
+            "h": 3,
+            "order": 3,
+        },
+        {
+            "title": "Recent activity",
+            "type": DashboardWidget.Type.RECENT_ACTIVITY,
+            "config": {"project_ids": project_ids},
+            "x": 0,
+            "y": 3,
+            "w": 12,
+            "h": 3,
+            "order": 4,
+        },
+    ]
+
+
+def my_team_widgets(*, projects: list[Project], users: list) -> list[dict]:
+    """Return widget specs for the personal team demo dashboard."""
+    project_ids = [project.id for project in projects]
+    owner = users[0]
+    return [
+        {
+            "title": "My open tickets",
+            "type": DashboardWidget.Type.METRIC_TILE,
+            "config": {
+                "project_ids": project_ids,
+                "assignee_ids": [owner.id],
+                "statuses": open_task_statuses(),
+            },
+            "x": 0,
+            "y": 0,
+            "w": 3,
+            "h": 2,
+            "order": 1,
+        },
+        {
+            "title": "Team workload",
+            "type": DashboardWidget.Type.TECHNICIAN_WORKLOAD,
+            "config": {"project_ids": project_ids, "statuses": open_task_statuses()},
+            "x": 3,
+            "y": 0,
+            "w": 5,
+            "h": 4,
+            "order": 2,
+        },
+        {
+            "title": "Overdue tickets",
+            "type": DashboardWidget.Type.DUE_SOON_TABLE,
+            "config": {"project_ids": project_ids, "due_window": "overdue"},
+            "x": 8,
+            "y": 0,
+            "w": 4,
+            "h": 4,
+            "order": 3,
+        },
+    ]
+
+
+def open_task_statuses() -> list[str]:
+    """Return task statuses treated as open in demo dashboards."""
+    return [
+        Task.Status.NEW,
+        Task.Status.ACCEPTED,
+        Task.Status.IN_PROGRESS,
+        Task.Status.ON_HOLD,
+    ]
+
+
+def active_dashboard_by_owner_and_name(*, owner, name: str) -> Dashboard | None:
+    """Return an active dashboard for a demo owner and name."""
+    return Dashboard.objects.filter(owner=owner, name=name, deleted_at__isnull=True).first()
+
+
+def ensure_dashboard_widget(*, dashboard: Dashboard, actor, spec: dict) -> DashboardWidget:
+    """Create or update one deterministic demo dashboard widget."""
+    widget = DashboardWidget.objects.filter(
+        dashboard=dashboard,
+        title=spec["title"],
+        deleted_at__isnull=True,
+    ).first()
+    defaults = {
+        "type": spec["type"],
+        "config": spec["config"],
+        "x": spec["x"],
+        "y": spec["y"],
+        "w": spec["w"],
+        "h": spec["h"],
+        "order": spec["order"],
+        "updated_by": actor,
+    }
+    if widget is None:
+        return DashboardWidget.objects.create(
+            dashboard=dashboard,
+            title=spec["title"],
+            created_by=actor,
+            **defaults,
+        )
+    for field, value in defaults.items():
+        setattr(widget, field, value)
+    widget.save(update_fields=[*defaults, "updated_at"])
+    return widget
+
+
+def ensure_dashboard_share(*, dashboard: Dashboard, actor, spec: dict) -> DashboardShare:
+    """Create or update one deterministic demo dashboard share."""
+    share = DashboardShare.objects.filter(
+        dashboard=dashboard,
+        target_type=spec["target_type"],
+        user=spec.get("user"),
+        project=spec.get("project"),
+        deleted_at__isnull=True,
+    ).first()
+    defaults = {
+        "access": spec["access"],
+        "updated_by": actor,
+    }
+    if share is None:
+        return DashboardShare.objects.create(
+            dashboard=dashboard,
+            target_type=spec["target_type"],
+            user=spec.get("user"),
+            project=spec.get("project"),
+            created_by=actor,
+            **defaults,
+        )
+    for field, value in defaults.items():
+        setattr(share, field, value)
+    share.save(update_fields=[*defaults, "updated_at"])
+    return share
 
 
 def active_project_by_name(*, name: str) -> Project | None:
