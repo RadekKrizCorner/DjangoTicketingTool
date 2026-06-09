@@ -36,6 +36,7 @@ nav:
       - Strategy: testing/strategy.md
   - Development:
       - Release Strategy: development/release-strategy.md
+      - PROJECT-027 Dashboard Walkthrough: development/project-027-dashboard-walkthrough.md
   - Deployment:
       - Docker: deployment/docker.md
       - Kubernetes: deployment/kubernetes.md
